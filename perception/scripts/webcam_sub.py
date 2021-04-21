@@ -1,16 +1,9 @@
 #!/usr/bin/env python3
-# Description:
-# - Subscribes to real-time streaming video from your built-in webcam.
-#
-# Author:
-# - Addison Sears-Collins
-# - https://automaticaddison.com
- 
-# Import the necessary libraries
 import rospy # Python library for ROS
 from sensor_msgs.msg import Image # Image is the message type
 from cv_bridge import CvBridge # Package to convert between ROS and OpenCV Images
 import cv2 # OpenCV library
+import numpy as np
  
 def callback(data):
  
@@ -22,9 +15,21 @@ def callback(data):
    
   # Convert ROS Image message to OpenCV image
   current_frame = br.imgmsg_to_cv2(data)
-   
+  # Make copy for post-processing
+  img = current_frame.copy()
+
+  # Convert to gray-scale before running corner-detection
+  gray = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY);
+  gray = np.float32(gray)
+  # TODO: tune these threshold values for our specific setup
+  dst = cv2.cornerHarris(gray,2,3,0.04)
+
+  # Dilate just to help with displaying results
+  dst = cv2.dilate(dst,None)
+  img[dst>0.01*dst.max()] = [0,0,255]
+
   # Display image
-  cv2.imshow("camera", current_frame)
+  cv2.imshow("corners", img)
    
   cv2.waitKey(1)
       
