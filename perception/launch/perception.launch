@@ -7,8 +7,8 @@
   />
   <node
     pkg="perception"
-    type="webcam_sub.py"
-    name="webcam_sub"
+    type="workspace_feature_detection.py"
+    name="workspace_feature_detection"
     output="screen"
   />
 </launch>
