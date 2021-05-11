@@ -12,7 +12,7 @@ def callback(data):
 
 	# convert ROS image to OpenCV image
 	current_frame = br.imgmsg_to_cv2(data)
-	# make copy for post-processing
+	# make copy for fiducial detection
 	img = current_frame.copy()
 
 	## Detect robot base via green fiducial sticker
@@ -30,19 +30,26 @@ def callback(data):
 	contours,_ = cv2.findContours(gray, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 	areas = [cv2.contourArea(c) for c in contours]
 	sorted_areas = np.sort(areas)
-	cnt = contours[areas.index(sorted_areas[-1])] # save the biggest contour
+	if sorted_areas:
+		cnt = contours[areas.index(sorted_areas[-1])] # save the biggest contour
 
-	# - build circle based on largest detected contour and minimium enclosing circle
-	(x,y),radius = cv2.minEnclosingCircle(cnt)
-	center = (int(x), int(y))
-	radius = int(radius)
-	# - draw result on top of original raw image
-	cv2.circle(img, center, radius, (0,0,255), 2)
+		# - build circle based on largest detected contour and minimium enclosing circle
+		(x,y),radius = cv2.minEnclosingCircle(cnt)
+		center = (int(x), int(y))
+		radius = int(radius)
+		# - draw result on top of original raw image
+		cv2.circle(img, center, radius, (0,0,255), 2)
 
 	## Detect top-right paper corner via Harris
-	
+	# - use grayscale for detection
+	gray = np.float32(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
+	dst = cv2.cornerHarris(gray, 2,3,0.04)
 
+	# - dilate to help display results
+	dst = cv2.dilate(dst, None)
+	img[dst>0.01*dst.max()] = [0,0,255]
 
+	## Display final results
 	cv2.imshow('feature_detection', img)
 
 	## after click SPACEBAR, save base frame and paper corner pixel coords for conversion
