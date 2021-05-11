@@ -46,24 +46,35 @@ def callback(data):
 			# - build minimum enclosing circles based on the detected contours
 			(x1,y1),radius1 = cv2.minEnclosingCircle(cnt1)
 			(x2,y2),radius2 = cv2.minEnclosingCircle(cnt2)
-			center1 = (int(x1), int(y1))
-			center2 = (int(x2), int(y2))
 			radius1 = int(radius1)
 			radius2 = int(radius2)
+		
+			# - differentiate robot base fiducial from paper corner fiducial
+			if x1>x2: # TODO: change condition based on 80/20 setup
+				paper_coords = (int(x1), int(y1))
+				base_coords = (int(x2), int(y2))
+			else:
+				paper_coords = (int(x2), int(y2))
+				base_coords = (int(x1), int(y1))
+
 			# - draw results on top of original raw image
-			cv2.circle(img, center1, radius1, (0,0,255), 2)
-			cv2.circle(img, center2, radius2, (0,0,255), 2)
+			cv2.circle(img, base_coords, radius1, (255,0,0), 2) # base in blue
+			cv2.circle(img, paper_coords, radius2, (0,0,255), 2) # paper corner in red
+
+			# - compute pixel coords of paper corner fiducial st robot base fiducial is origin
+			# -- this computation aligns with the base frame origin in our link diagram
+			paper_offset_coords = (paper_coords[0]-base_coords[0], base_coords[1]-paper_coords[1])
 		else:
 			fiducials_detected = False
 
 	## Display final results
 	cv2.imshow('feature_detection', img)
-	
+
 	## after click SPACEBAR, save base frame and paper corner pixel coords for conversion
 	key = cv2.waitKey(1)
 	if key%256 == 32: # SPACEBAR
 		if fiducials_detected:
-			rospy.loginfo('detected features') # save detected features
+			rospy.loginfo(paper_offset_coords) # save detected features
 
 
 def detect_features():
