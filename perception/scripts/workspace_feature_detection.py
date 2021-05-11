@@ -6,6 +6,11 @@ from cv_bridge import CvBridge # Package to convert between ROS and OpenCV Image
 import cv2 # OpenCV library
 import numpy as np
 
+
+fiducials_detected = False
+area_thresh = 100 # TODO: tune on 80/20 setup
+
+
 def callback(data):
 	# used to convert between ROS and OpenCV images
 	br = CvBridge()
@@ -15,7 +20,7 @@ def callback(data):
 	# make copy for fiducial detection
 	img = current_frame.copy()
 
-	## Detect robot base via green fiducial sticker
+	## Detect robot base and top-right corner via green fiducial sticker
 	# - define hsv range corresponding to color green
 	hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 	green_mask = cv2.inRange(hsv, (40, 30, 30), (70, 255, 255))
@@ -25,37 +30,40 @@ def callback(data):
 	green = np.zeros_like(img, np.uint8)
 	green[imask] = img[imask]
 	
-	# - use largest detected contour to define circle around green region
+	# - use two largest detected contours to define circle around green regions
 	gray = cv2.cvtColor(green, cv2.COLOR_BGR2GRAY) # contour detection requries grayscale
 	contours,_ = cv2.findContours(gray, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 	areas = [cv2.contourArea(c) for c in contours]
 	sorted_areas = np.sort(areas)
-	if sorted_areas:
-		cnt = contours[areas.index(sorted_areas[-1])] # save the biggest contour
+	large_areas = sorted_areas[sorted_areas > area_thresh]
+	if large_areas.size:
+		if len(large_areas) == 2:
+			fiducials_detected = True
 
-		# - build circle based on largest detected contour and minimium enclosing circle
-		(x,y),radius = cv2.minEnclosingCircle(cnt)
-		center = (int(x), int(y))
-		radius = int(radius)
-		# - draw result on top of original raw image
-		cv2.circle(img, center, radius, (0,0,255), 2)
+			cnt1 = contours[areas.index(large_areas[-1])] # save largest contour
+			cnt2 = contours[areas.index(large_areas[-2])] # save 2nd largest contour
 
-	## Detect top-right paper corner via Harris
-	# - use grayscale for detection
-	gray = np.float32(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
-	dst = cv2.cornerHarris(gray, 2,3,0.04)
-
-	# - dilate to help display results
-	dst = cv2.dilate(dst, None)
-	img[dst>0.01*dst.max()] = [0,0,255]
+			# - build minimum enclosing circles based on the detected contours
+			(x1,y1),radius1 = cv2.minEnclosingCircle(cnt1)
+			(x2,y2),radius2 = cv2.minEnclosingCircle(cnt2)
+			center1 = (int(x1), int(y1))
+			center2 = (int(x2), int(y2))
+			radius1 = int(radius1)
+			radius2 = int(radius2)
+			# - draw results on top of original raw image
+			cv2.circle(img, center1, radius1, (0,0,255), 2)
+			cv2.circle(img, center2, radius2, (0,0,255), 2)
+		else:
+			fiducials_detected = False
 
 	## Display final results
 	cv2.imshow('feature_detection', img)
-
+	
 	## after click SPACEBAR, save base frame and paper corner pixel coords for conversion
 	key = cv2.waitKey(1)
 	if key%256 == 32: # SPACEBAR
-		rospy.loginfo('detected features') # save detected features
+		if fiducials_detected:
+			rospy.loginfo('detected features') # save detected features
 
 
 def detect_features():
@@ -69,6 +77,6 @@ if __name__ == '__main__':
 	pub = rospy.Publisher('/perception/paper_corner_robot_frame', Pose2D, callback)
 
 	try:
-		detect_features()
+		detect_features()	
 	except rospy.ROSInterruptException:
 		pass
