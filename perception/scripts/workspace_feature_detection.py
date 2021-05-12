@@ -9,7 +9,7 @@ import numpy as np
 
 fiducials_detected = False
 area_thresh = 100 # TODO: tune on 80/20 setup
-pixel_pose = Pose2D() # data to be published
+paper_corner_pixel_pose = Pose2D() # data to be published (pixel coords of paper corner)
 
 def callback(data):
 	# used to convert between ROS and OpenCV images
@@ -70,24 +70,24 @@ def callback(data):
 	## Display final results
 	cv2.imshow('feature_detection', img)
 
-	pixel_pose.x = 0
-	pixel_pose.y = 0
-	pixel_pose.theta = 0
+	paper_corner_pixel_pose.x = 0
+	paper_corner_pixel_pose.y = 0
+	paper_corner_pixel_pose.theta = 0
 
 	## after click SPACEBAR, save base frame and paper corner pixel coords for conversion
 	key = cv2.waitKey(1)
 	if key%256 == 32: # SPACEBAR
 		if fiducials_detected:
 			# package Pose2D
-			pixel_pose.x = paper_offset_coords[0]
-			pixel_pose.y = paper_offset_coords[1]
+			paper_corner_pixel_pose.x = paper_offset_coords[0]
+			paper_corner_pixel_pose.y = paper_offset_coords[1]
 
 
 def detect_features():
 	rate = rospy.Rate(10) # 10Hz
 
 	while not rospy.is_shutdown():
-		pub.publish(pixel_pose)
+		pub.publish(paper_corner_pixel_pose)
 
 		# sleep enough to maintain desired rate
 		rate.sleep()
