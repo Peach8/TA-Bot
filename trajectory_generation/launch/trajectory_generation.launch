@@ -1,0 +1,8 @@
+<launch>
+  <node
+    pkg="trajectory_generation"
+    type="robot_trajectory_generation.py"
+    name="robot_trajectory_generation"
+    output="screen"
+  />  
+</launch>
