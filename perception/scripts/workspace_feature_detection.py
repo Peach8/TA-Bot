@@ -66,6 +66,8 @@ def callback(data):
 			paper_offset_coords = (paper_coords[0]-base_coords[0], base_coords[1]-paper_coords[1])
 		else:
 			fiducials_detected = False
+	else:
+		fiducials_detected = False
 
 	## Display final results
 	cv2.imshow('feature_detection', img)
