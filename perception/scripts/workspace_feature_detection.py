@@ -9,7 +9,7 @@ import numpy as np
 
 fiducials_detected = False
 area_thresh = 100 # TODO: tune on 80/20 setup
-paper_corner_pixel_pose = Pose2D() # data to be published (pixel coords of paper corner)
+paper_fiducial_pixel_pose = Pose2D() # data to be published (pixel coords of paper corner)
 
 def callback(data):
 	# used to convert between ROS and OpenCV images
@@ -49,7 +49,7 @@ def callback(data):
 			radius1 = int(radius1)
 			radius2 = int(radius2)
 		
-			# - differentiate robot base fiducial from paper corner fiducial
+			# - differentiate robot base fiducial from paper  fiducial
 			if x1>x2: # TODO: change condition based on 80/20 setup
 				paper_coords = (int(x1), int(y1))
 				base_coords = (int(x2), int(y2))
@@ -59,9 +59,9 @@ def callback(data):
 
 			# - draw results on top of original raw image
 			cv2.circle(img, base_coords, radius1, (255,0,0), 2) # base in blue
-			cv2.circle(img, paper_coords, radius2, (0,0,255), 2) # paper corner in red
+			cv2.circle(img, paper_coords, radius2, (0,0,255), 2) # paper fiducial in red
 
-			# - compute pixel coords of paper corner fiducial st robot base fiducial is origin
+			# - compute pixel coords of paper  fiducial st robot base fiducial is origin
 			# -- this computation aligns with the base frame origin in our link diagram
 			paper_offset_coords = (paper_coords[0]-base_coords[0], base_coords[1]-paper_coords[1])
 		else:
@@ -70,24 +70,24 @@ def callback(data):
 	## Display final results
 	cv2.imshow('feature_detection', img)
 
-	paper_corner_pixel_pose.x = 0
-	paper_corner_pixel_pose.y = 0
-	paper_corner_pixel_pose.theta = 0
+	paper_fiducial_pixel_pose.x = 0
+	paper_fiducial_pixel_pose.y = 0
+	paper_fiducial_pixel_pose.theta = 0
 
-	## after click SPACEBAR, save base frame and paper corner pixel coords for conversion
+	## after click SPACEBAR, save base frame and paper fiducial pixel coords for conversion
 	key = cv2.waitKey(1)
 	if key%256 == 32: # SPACEBAR
 		if fiducials_detected:
 			# package Pose2D
-			paper_corner_pixel_pose.x = paper_offset_coords[0]
-			paper_corner_pixel_pose.y = paper_offset_coords[1]
+			paper_fiducial_pixel_pose.x = paper_offset_coords[0]
+			paper_fiducial_pixel_pose.y = paper_offset_coords[1]
 
 
 def detect_features():
 	rate = rospy.Rate(10) # 10Hz
 
 	while not rospy.is_shutdown():
-		pub.publish(paper_corner_pixel_pose)
+		pub.publish(paper_fiducial_pixel_pose)
 
 		# sleep enough to maintain desired rate
 		rate.sleep()
@@ -96,7 +96,7 @@ def detect_features():
 if __name__ == '__main__':
 	rospy.init_node('workspace_feature_detection', anonymous=True)
 	rospy.Subscriber('/perception/video_frames', Image, callback, queue_size=1)
-	pub = rospy.Publisher('/perception/paper_corner_pixel_coords', Pose2D, queue_size=1)
+	pub = rospy.Publisher('/perception/paper_fiducial_pixel_coords', Pose2D, queue_size=1)
 
 	try:
 		detect_features()	
