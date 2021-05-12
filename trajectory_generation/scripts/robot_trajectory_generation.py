@@ -2,11 +2,13 @@
 import rospy # Python library for ROS
 from geometry_msgs.msg import Pose2D
 import numpy as np
+import sys
+sys.path.insert(0, './include/')
+from include import workspace_conversions
 
 def callback(data):
 	if data.x != 0.0:
-		rospy.loginfo(data.x)
-
+		rospy.loginfo(workspace_conversions.convert_pixels_to_mm(data.x))
 
 def generate_trajectory():
 	rate = rospy.Rate(10) # 10Hz
