@@ -1,0 +1,4 @@
+<launch>
+    <include file="$(find perception)/launch/perception.launch"/>
+    <include file="$(find trajectory_generation)/launch/trajectory_generation.launch"/>
+</launch>
