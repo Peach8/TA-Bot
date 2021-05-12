@@ -9,7 +9,7 @@ import numpy as np
 
 fiducials_detected = False
 area_thresh = 100 # TODO: tune on 80/20 setup
-
+pixel_pose = Pose2D() # data to be published
 
 def callback(data):
 	# used to convert between ROS and OpenCV images
@@ -70,22 +70,33 @@ def callback(data):
 	## Display final results
 	cv2.imshow('feature_detection', img)
 
+	pixel_pose.x = 0
+	pixel_pose.y = 0
+	pixel_pose.theta = 0
+
 	## after click SPACEBAR, save base frame and paper corner pixel coords for conversion
 	key = cv2.waitKey(1)
 	if key%256 == 32: # SPACEBAR
 		if fiducials_detected:
-			rospy.loginfo(paper_offset_coords) # save detected features
+			# package Pose2D
+			pixel_pose.x = paper_offset_coords[0]
+			pixel_pose.y = paper_offset_coords[1]
 
 
 def detect_features():
-	rospy.init_node('workspace_feature_detection', anonymous=True)
-	rospy.Subscriber('/perception/video_frames', Image, callback)
+	rate = rospy.Rate(10) # 10Hz
 
-	#pub.publish
-	rospy.spin()
+	while not rospy.is_shutdown():
+		pub.publish(pixel_pose)
+
+		# sleep enough to maintain desired rate
+		rate.sleep()
+
 
 if __name__ == '__main__':
-	pub = rospy.Publisher('/perception/paper_corner_robot_frame', Pose2D, callback)
+	rospy.init_node('workspace_feature_detection', anonymous=True)
+	rospy.Subscriber('/perception/video_frames', Image, callback, queue_size=1)
+	pub = rospy.Publisher('/perception/paper_corner_pixel_coords', Pose2D, queue_size=1)
 
 	try:
 		detect_features()	
