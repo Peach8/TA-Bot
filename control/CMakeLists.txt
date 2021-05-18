@@ -60,6 +60,7 @@ add_service_files(
   PIDSetGains.srv
   PIDSetOutputLimits.srv
   PIDCompute.srv
+  IKCompute.srv
 )
 
 ## Generate actions in the 'action' folder
