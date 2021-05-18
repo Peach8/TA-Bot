@@ -58,6 +58,7 @@ add_service_files(
   DIRECTORY srv
   FILES
   PIDSetGains.srv
+  PIDSetOutputLimits.srv
   PIDCompute.srv
 )
 

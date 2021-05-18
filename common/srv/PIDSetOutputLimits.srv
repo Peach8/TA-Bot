@@ -1,0 +1,4 @@
+float32 output_min
+float32 output_max
+---
+float32 sum
