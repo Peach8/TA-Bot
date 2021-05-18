@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 import math
-from common.srv import *
+from control.srv import *
 
 class PIDService:
 	def __init__(self):
