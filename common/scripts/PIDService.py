@@ -12,6 +12,8 @@ class PIDService:
 		self.p_term = 0.0
 		self.d_term = 0.0
 		self.i_term = 0.0
+		self.i_term_min = -1.0
+		self.i_term_max = 1.0
 
 		self.prev_error = 0.0
 		self.update_hz = 10
@@ -45,7 +47,10 @@ class PIDService:
 		self.d_term = self.kd*(req.error - self.prev_error)*self.update_hz
 		self.i_term += self.ki*req.error/self.update_hz
 
-		self.prev_error = req.error
+		if self.i_term > self.i_term_max:
+			self.i_term = self.i_term_max
+		elif self.i_term < self.i_term_min:
+			self.i_term = self.i_term_min
 
 		output = self.p_term + self.d_term + self.i_term
 
@@ -53,6 +58,8 @@ class PIDService:
 			output = self.output_max
 		elif output < self.output_min:
 			output = self.output_min
+
+		self.prev_error = req.error
 
 		return output
 
