@@ -28,8 +28,6 @@ def publish_message():
 		ret, frame = cap.read()
 		 
 		if ret == True:
-			# rospy.loginfo('publishing video frame')
-			     
 			pub.publish(br.cv2_to_imgmsg(frame))
              
 		# sleep enough to maintain the desired rate
