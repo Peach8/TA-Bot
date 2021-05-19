@@ -1,0 +1,7 @@
+<launch>
+    <include file="$(find perception)/launch/perception.launch"/>
+    <include file="$(find trajectory_generation)/launch/trajectory_generation.launch"/>
+    <include file="$(find control)/launch/pid.launch"/>
+    <include file="$(find control)/launch/ik.launch"/>
+    <include file="$(find control)/launch/mission_control.launch"/>
+</launch>

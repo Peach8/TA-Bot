@@ -1,5 +1,0 @@
-<launch>
-    <include file="$(find perception)/launch/perception.launch"/>
-    <include file="$(find trajectory_generation)/launch/trajectory_generation.launch"/>
-    <include file="$(find common)/launch/pid.launch"/>
-</launch>
