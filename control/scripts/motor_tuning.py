@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import rospy
+import rosbag
 import sys
 from control.srv import *
 from motor.srv import *
@@ -23,6 +24,8 @@ actual_motor_position = 0
 desired_motor_position = 0
 desired_motor_pwm = SetMotorPWM()
 desired_motor_pwm.id = joint_id_dict[joint_str]
+
+bag = robag.Bag('actual_position', 'w')
 
 def control_motor():
 	global actual_motor_position
@@ -83,6 +86,7 @@ if __name__ == '__main__':
 		control_motor()
 		pwm_pub.publish(desired_motor_pwm)
 		rospy.loginfo(actual_motor_position)
+		bag.write(actual_motor_position)
 
 		# sleep enough to maintain desired rate
 		rate.sleep()
