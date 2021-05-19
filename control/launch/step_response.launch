@@ -1,0 +1,5 @@
+<launch>
+    <include file="$(find control)/launch/pid.launch"/>
+    <include file="$(find control)/launch/motor_tuning.launch"/>
+    <include file="$(find motor)/launch/motor_read_write.launch"/>
+</launch>

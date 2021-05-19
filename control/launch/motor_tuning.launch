@@ -1,0 +1,7 @@
+<launch>
+  <node
+    pkg="control"
+    type="motor_tuning.py"
+    name="motor_tuning"
+  />
+</launch>

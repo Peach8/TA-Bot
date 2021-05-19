@@ -1,0 +1,7 @@
+<launch>
+  <node
+    pkg="motor"
+    type="motor_read_write.py"
+    name="motor_read_write"
+  />
+</launch>
