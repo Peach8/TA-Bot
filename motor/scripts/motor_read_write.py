@@ -6,11 +6,33 @@ parentdir = os.path.dirname(currentdir)
 sys.path.append(parentdir)
 from dynamixel_sdk import *
 from motor.srv import *
+from motor.msg import *
+
+
+if os.name == 'nt':
+    import msvcrt
+    def getch():
+        return msvcrt.getch().decode()
+else:
+    import sys, tty, termios
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    def getch():
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
 
 # Control table address
 ADDR_TORQUE_ENABLE      = 64               # Control table address is different in Dynamixel model
-ADDR_GOAL_POSITION      = 116
-ADDR_PRESENT_POSITION   = 132
+ADDR_GOAL_POSITION      = 116              # [0, 4095]
+ADDR_GOAL_PWM           = 100              # [-885, 885]
+ADDR_PRESENT_POSITION   = 132              # 360DEG SCALED TO [0, 4095]
+ADDR_OPERATING_MODE     = 11               # 1 VELOCITY / 3 POSITION / 4 EXT POSITION / 16 PWM
+
 
 # Protocol version
 PROTOCOL_VERSION            = 2.0               # See which protocol version is used in the Dynamixel
@@ -34,6 +56,10 @@ def set_goal_pos_callback(data):
     print("Set Goal Position of ID %s = %s" % (data.id, data.position))
     dxl_comm_result, dxl_error = packetHandler.write4ByteTxRx(portHandler, data.id, ADDR_GOAL_POSITION, data.position)
 
+def set_motor_pwm_callback(data):
+    print("Set Goal Position of ID %s = %s" % (data.id, data.pwm))
+    dxl_comm_result, dxl_error = packetHandler.write4ByteTxRx(portHandler, data.id, ADDR_GOAL_PWM, data.pwm)
+
 def get_present_pos(req):
     dxl_present_position, dxl_comm_result, dxl_error = packetHandler.read4ByteTxRx(portHandler, req.id, ADDR_PRESENT_POSITION)
     print("Present Position of ID %s = %s" % (req.id, dxl_present_position))
@@ -42,7 +68,8 @@ def get_present_pos(req):
 def read_write_py_node():
     rospy.init_node('read_write_py_node')
     rospy.Subscriber('set_position', SetPosition, set_goal_pos_callback)
-    rospy.Service('get_position', GetPosition, get_present_pos)
+    rospy.Subscriber('set_PWM', SetMotorPWM, set_motor_pwm_callback)
+    rospy.Service('get_position', GetMotorPosition, get_present_pos)
     rospy.spin()
 
 def main():
@@ -84,7 +111,6 @@ def main():
     print("Ready to get & set Position.")
 
     read_write_py_node()
-
 
 if __name__ == '__main__':
     main()
