@@ -17,13 +17,13 @@ def handle_fk_compute(req):
 	y1 = L1* math.sin(req.theta1)
 
 	# Solve for end of Link 2
-	resp.x = x1 + L2 * math.cos(req.theta2)
-	resp.y = y1 + L2 * math.sin(req.theta2)
+	resp.x = x1 + L2 * math.cos(req.theta1+req.theta2)
+	resp.y = y1 + L2 * math.sin(req.theta1+req.theta2)
 
 	return resp
 
 	# Alternatively, if we want the full transformation matrix
-	#T = np.array([[ math.cos(req.theta1+req.theta2), -math.sin(req.theta1+req.theta2), L2*math.cos(req.theta1+req.theta2)+L1*cos(req.theta1)],
+	#T = np.array([[ math.cos(req.theta1+req.theta2), -math.sin(req.theta1+req.theta2), L2*math.cos(req.theta1+req.theta2)+L1*math.cos(req.theta1)],
 	#	[math.sin(req.theta1+req.theta2), math.cos(req.theta1+req.theta2), L2*math.sin(req.theta1+req.theta2)+L1*math.sin(req.theta1)],
 	#	[0, 0, 0, 1]])
 	#resp.x = T[0][2]
