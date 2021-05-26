@@ -30,7 +30,7 @@ def handle_fk_compute(req):
 	#resp.y = T[1][2]
 	#return resp
 
-if __name__ == "__ophelie_fk":
+if __name__ == "__main__":
 	rospy.init_node('fk_service')
 	rospy.Service('fk_compute', FKCompute, handle_fk_compute)
 	rospy.spin()
