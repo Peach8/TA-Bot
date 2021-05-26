@@ -2,6 +2,7 @@
 import rospy
 import rosbag
 import sys
+import signal
 from control.srv import *
 from motor.srv import *
 
@@ -42,7 +43,13 @@ def control_motor():
 	desired_motor_pwm.pwm = pid_compute_resp.output
 
 
+def process_kill_handler(sig, frame):
+	bag.close() # close rosbag on CTRL+C
+	sys.exit(0)
+
 if __name__ == '__main__':
+	signal.signal(signal.SIGINT, process_kill_handler)
+
 	global actual_motor_position
 	global desired_motor_position
 	global desired_motor_pwm
