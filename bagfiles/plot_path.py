@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import re
 
-text_filter = "joint1_kp2_target2800"
+# text_filter = ".*joint1_kp2.*"
+text_filter = ".*actual_position.*"
 
 def identify_bags():
     path = '/home/alex/.ros/'
@@ -51,19 +52,21 @@ def read_bag(bag_file):
     '''
 
 def create_path_plot(x_positions, y_positions, times):
-    # plt.ion()
-    # d = DynamicUpdate()
-    # d(x_positions, y_positions, times)
-    # plt.ioff()
-    # input('Press enter to continue...')
-    # os.system('read -s -n 1 -p "Press any key to continue..."')
     xpos_np = np.array(x_positions)
     times_np = np.array(times)
-    mask = xpos_np > 100
+    mask = (xpos_np > 100) * (times_np < 5)
 
 
     xpos_np = xpos_np[mask]
     times_np = times_np[mask]
+
+
+    # plt.ion()
+    # d = DynamicUpdate()
+    # d(times_np, xpos_np, times_np)
+    # plt.ioff()
+    # input('Press enter to continue...')
+    # # os.system('read -s -n 1 -p "Press any key to continue..."')
     
     fig, ax = plt.subplots()
     ax.plot(times_np, xpos_np,'o-')
@@ -111,6 +114,11 @@ class DynamicUpdate():
 
 if __name__ == "__main__":
     bag_files = identify_bags()
+    
+    r = re.compile(text_filter)
+    bag_files = list(filter(r.match, bag_files))
+    print(bag_files)
+
     x_positions, y_positions, times = read_bag(bag_files[0])
     create_path_plot(x_positions,[math.sqrt(i) for i in y_positions],times)
     

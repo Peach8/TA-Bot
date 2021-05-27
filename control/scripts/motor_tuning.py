@@ -7,6 +7,7 @@ from std_msgs.msg import Int32
 from control.srv import *
 from motor.srv import *
 from motor.msg import *
+import time
 
 global actual_motor_position
 global desired_motor_position
@@ -16,12 +17,12 @@ global desired_motor_pwm
 # - motor read_write node that includes all serial port stuff
 
 # change the gains and re-run node
-kp = 4.0
+kp = 1.0
 kd = 0.0
 ki = 0.0
 
 # change when switching motors to tune
-joint_str = "joint1"
+joint_str = "joint3"
 
 # TODO: reassign these if necessary
 joint_id_dict = {"joint1": 0, "joint2": 1, "joint3": 2}
@@ -69,8 +70,9 @@ if __name__ == '__main__':
 	pid_set_gains = rospy.ServiceProxy(joint_str + "_pid_set_gains", PIDSetGains)
 	try:
 		set_gains_resp = pid_set_gains(kp,kd,ki)
+
 		# confirm response via sum
-		if set_gains_resp.sum == kp+kd+ki:
+		if set_gains_resp.sum == int(kp+kd+ki):
 			print("pid gain checksum confirmed")
 		else:
 			print("Invalid response from PIDSetGains service")
@@ -81,12 +83,20 @@ if __name__ == '__main__':
 	rospy.wait_for_service(joint_str + "_pid_compute")
 	pid_compute = rospy.ServiceProxy(joint_str + "_pid_compute", PIDCompute)
 
-
 	# set up publisher to write desired PWM to each motor (subscriber established in motor/read_write_node)
 	pwm_pub = rospy.Publisher('set_PWM', SetMotorPWM, queue_size=10)
 
-	# rospy.spin()
+	motor_writer = rospy.Publisher('set_position', SetPosition, queue_size=10)
+	target_pos = SetPosition()
+
+	time.sleep(1)
+	target_pos.id = joint_id_dict[joint_str]
+	target_pos.position = 450
+	motor_writer.publish(target_pos)
+
 	rate = rospy.Rate(10) # Hz
+	# rospy.spin()
+	time.sleep(1)
 
 	# print current position of the motor and prompt user for desired position
 	get_motor_position_resp = get_motor_position(joint_id_dict[joint_str])
@@ -94,9 +104,10 @@ if __name__ == '__main__':
 	
 	desired_motor_position = int(input("enter desired motor position:\n"))
 
-	if desired_motor_position < 1500 or desired_motor_position > 2801:
+	if desired_motor_position < 450 or desired_motor_position > 925:
 		print("desired position out of bounds")
 		sys.exit(0)
+
 
 	while not rospy.is_shutdown():
 		control_motor()

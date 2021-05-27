@@ -8,6 +8,7 @@ import os, sys
 from dynamixel_sdk import *
 from motor.srv import *
 from motor.msg import *
+import time
 
 
 if os.name == 'nt':
@@ -61,8 +62,19 @@ packetHandler = PacketHandler(PROTOCOL_VERSION)
 # bulkReader = GroupBulkRead(portHandler,packetHandler)
 
 def set_goal_pos_callback(data):
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, data.id, ADDR_TORQUE_ENABLE, TORQUE_DISABLE)
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, data.id, ADDR_OPERATING_MODE, 3)
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, data.id, ADDR_TORQUE_ENABLE, TORQUE_ENABLE)
+
     print("Set Goal Position of ID %s = %s" % (data.id, data.position))
     dxl_comm_result, dxl_error = packetHandler.write4ByteTxRx(portHandler, data.id, ADDR_GOAL_POSITION, data.position)
+    time.sleep(2)
+
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, data.id, ADDR_TORQUE_ENABLE, TORQUE_DISABLE)
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, data.id, ADDR_OPERATING_MODE, 16)
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, data.id, ADDR_TORQUE_ENABLE, TORQUE_ENABLE)
+
+
 
 def set_motor_pwm_callback(data):
     print("Set Goal PWM of ID %s = %s" % (data.id, data.pwm))
