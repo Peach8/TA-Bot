@@ -1,5 +1,29 @@
 <launch>
-    <include file="$(find control)/launch/pid.launch"/>
-    <include file="$(find control)/launch/motor_tuning.launch"/>
-    <include file="$(find motor)/launch/motor_read_write.launch"/>
+  <node name="joint1_pid_service" pkg="control" type="PIDService.py">
+    <remap from="pid_set_gains" to="joint1_pid_set_gains"/>
+    <remap from="pid_set_output_limits" to="joint1_pid_set_output_limits"/>
+    <remap from="pid_compute" to="joint1_pid_compute"/>
+  </node>
+  <node name="joint2_pid_service" pkg="control" type="PIDService.py">
+    <remap from="pid_set_gains" to="joint2_pid_set_gains"/>
+    <remap from="pid_set_output_limits" to="joint2_pid_set_output_limits"/>
+    <remap from="pid_compute" to="joint2_pid_compute"/>
+  </node>
+  <node name="joint3_pid_service" pkg="control" type="PIDService.py">
+    <remap from="pid_set_gains" to="joint3_pid_set_gains"/>
+    <remap from="pid_set_output_limits" to="joint3_pid_set_output_limits"/>
+    <remap from="pid_compute" to="joint3_pid_compute"/>
+  </node>
+  <node
+    pkg="control"
+    type="motor_tuning.py"
+    name="motor_tuning"
+    output="screen"
+  />
+  <node
+    pkg="motor"
+    type="motor_read_write.py"
+    name="read_write_py_node"
+    output="screen"
+  /> 
 </launch>

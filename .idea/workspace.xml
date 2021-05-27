@@ -5,8 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="97d6a9d3-9dc3-44fd-bff0-32663b388eb0" name="Default Changelist" comment="Initial Setup">
-      <change afterPath="$PROJECT_DIR$/motor/scripts/read_write_node.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamixelSDK/ros/dynamixel_sdk/src/dynamixel_sdk/port_handler.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamixelSDK/ros/dynamixel_sdk/src/dynamixel_sdk/port_handler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamixelSDK/ros/dynamixel_sdk_examples/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/DynamixelSDK/ros/dynamixel_sdk_examples/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamixelSDK/ros/dynamixel_sdk_examples/src/read_write_node.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamixelSDK/ros/dynamixel_sdk_examples/src/read_write_node.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

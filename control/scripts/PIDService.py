@@ -61,7 +61,7 @@ class PIDService:
 
 		self.prev_error = req.error
 
-		return output
+		return int(output)
 
 
 if __name__ =="__main__":
