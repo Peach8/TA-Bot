@@ -62,8 +62,8 @@ if __name__ == '__main__':
 	rospy.init_node("motor_tuning", anonymous=True)
 
 	# set up motor encoder service proxy (service established in motor/read_write_node)
-	rospy.wait_for_service('get_position')
-	get_motor_position = rospy.ServiceProxy('get_position', GetMotorPosition)
+	rospy.wait_for_service('get_motor_position')
+	get_motor_position = rospy.ServiceProxy('get_motor_position', GetMotorPosition)
 
 	# set up pid service proxies
 	rospy.wait_for_service(joint_str + "_pid_set_gains")
@@ -84,7 +84,7 @@ if __name__ == '__main__':
 	pid_compute = rospy.ServiceProxy(joint_str + "_pid_compute", PIDCompute)
 
 	# set up publisher to write desired PWM to each motor (subscriber established in motor/read_write_node)
-	pwm_pub = rospy.Publisher('set_PWM', SetMotorPWM, queue_size=10)
+	pwm_pub = rospy.Publisher('set_motor_pwm', SetMotorPWM, queue_size=10)
 
 	motor_writer = rospy.Publisher('set_position', SetPosition, queue_size=10)
 	target_pos = SetPosition()

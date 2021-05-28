@@ -50,7 +50,7 @@ catkin_python_setup()
 add_message_files(
   FILES
   SetMotorPWM.msg
-  SetPosition.msg
+  SetMotorPosition.msg
   BulkSetItem.msg
 )
 

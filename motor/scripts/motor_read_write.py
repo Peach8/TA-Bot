@@ -95,9 +95,9 @@ def get_present_pos(req):
 
 def read_write_py_node():
     rospy.init_node('read_write_py_node')
-    rospy.Subscriber('set_position', SetPosition, set_goal_pos_callback)
-    rospy.Subscriber('set_PWM', SetMotorPWM, set_motor_pwm_callback)
-    rospy.Service('get_position', GetMotorPosition, get_present_pos)
+    rospy.Subscriber('set_motor_position', SetMotorPosition, set_goal_pos_callback)
+    rospy.Subscriber('set_motor_pwm', SetMotorPWM, set_motor_pwm_callback)
+    rospy.Service('get_motor_position', GetMotorPosition, get_present_pos)
     rospy.spin()
 
 def main():
