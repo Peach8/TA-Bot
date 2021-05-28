@@ -33,7 +33,7 @@ class PIDService:
 		self.i_term = 0
 
 		# check sum on client side to confirm update
-		return req.kp + req.kd + req.ki
+		return int(req.kp + req.kd + req.ki)
 
 	def handle_pid_set_output_limits(self,req):
 		self.output_min = req.output_min
@@ -61,7 +61,7 @@ class PIDService:
 
 		self.prev_error = req.error
 
-		return output
+		return int(output)
 
 
 if __name__ =="__main__":

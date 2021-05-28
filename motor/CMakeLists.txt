@@ -50,12 +50,16 @@ catkin_python_setup()
 add_message_files(
   FILES
   SetMotorPWM.msg
+  SetMotorPosition.msg
+  BulkSetItem.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
   GetMotorPosition.srv
+  BulkGetItem.srv
+  SyncGetPosition.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -159,6 +163,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
    scripts/motor_read_write.py
+   scripts/motor_pos_client.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
