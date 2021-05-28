@@ -20,12 +20,12 @@ desired_motor_pwm2 = SetMotorPWM()
 desired_motor_pwms = [desired_motor_pwm1, desired_motor_pwm2]
 
 # define constant motor properties
-# - TODO: add these offsets to motor values to conver to joint space
+# - TODO: add these offsets to motor values to convert to joint space @Alex
 joint1_offset = 0.0 # rad
 joint2_offset = 0.0 # rad
 joint_offsets = [joint1_offset, joint2_offset]
 
-# - TODO: define min and max joint positions in radians
+# - TODO: define min and max joint positions in radians @Alex
 joint1_min = 0.0       # rad
 joint1_max = 2*math.pi # rad
 joint2_min = 0.0       # rad
@@ -71,7 +71,7 @@ def clamp_joint_position(joint_idx, desired_joint_theta):
 	return desired_joint_theta
 
 
-def control_motors(desired_motor_encs):
+def control_motor_positions(desired_motor_encs):
 	global actual_motor_encs
 
 	for i in range(2):
@@ -179,7 +179,7 @@ if __name__ == '__main__':
 		desired_motor_encs.append(desired_motor_theta * _______)
 
 	while not rospy.is_shutdown():
-		control_motors(desired_motor_encs)
+		control_motor_positions(desired_motor_encs)
 
 		for i in range(2):
 			motor_pwm_pub.publish(desired_motor_pwms[i])
