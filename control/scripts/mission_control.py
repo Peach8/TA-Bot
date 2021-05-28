@@ -83,7 +83,7 @@ def control_motors(desired_motor_encs):
 		pid_compute_resp = pid_compute(position_error)
 
 		desired_motor_pwms[i].id = i
-		desired_motor_pwms[i].pwm = pid_compute_resp.output
+		desired_motor_pwms[i].pwm = pid_compute_resp.output + joint_ffs[i]
 
 
 def compute_actual_xy():
