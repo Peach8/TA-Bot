@@ -7,14 +7,14 @@
   />
   <node
     pkg="control"
-    type="ik_compute.py"
-    name="ik_compute"
+    type="IKService.py"
+    name="ik_service"
     output="screen"
   />
   <node
     pkg="control"
-    type="fk_compute.py"
-    name="fk_compute"
+    type="FKService.py"
+    name="fk_service"
     output="screen"
   />
   <node name="joint1_pid_service" pkg="control" type="PIDService.py">

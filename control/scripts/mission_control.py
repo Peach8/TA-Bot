@@ -8,6 +8,7 @@ import math
 import time
 from control.srv import *
 from motor.srv import *
+from motor.msg import *
 
 # define global variables
 global actual_motor_encs
@@ -18,6 +19,8 @@ global desired_motor_pwm2 # int
 desired_motor_pwm1 = SetMotorPWM()
 desired_motor_pwm2 = SetMotorPWM()
 desired_motor_pwms = [desired_motor_pwm1, desired_motor_pwm2]
+
+joint_names = ["joint1", "joint2", "joint3"]
 
 # define constant motor properties
 # add these offsets to motor values to convert to joint space
@@ -36,20 +39,20 @@ joint_limits = [[joint1_min,joint1_max], [joint2_min,joint2_max]]
 kp1 = 2.0
 kd1 = 0.1
 ki1 = 0.0
-ff_pwm1 = 0.0 # TODO: @Oph
+ff_pwm1 = 30.0 # TODO: @Oph
 joint1_pid_gains = [kp1, kd1, ki1]
 
 # - joint2 position control gains
 kp2 = 4.0
 kd2 = 0.1
 ki2 = 0.0
-ff_pwm2 = 0.0 # TODO: @Oph
+ff_pwm2 = -40.0 # TODO: @Oph
 joint2_pid_gains = [kp2, kd2, ki2]
 
 # - joint3 position control gains
-kp = 1.0
-kd = 0.0
-ki = 0.0
+kp3 = 1.0
+kd3 = 0.0
+ki3 = 0.0
 ff_pwm3 = 0.0
 joint3_pid_gains = [kp3, kd3, ki3]
 
@@ -60,8 +63,8 @@ joint_ffs = [ff_pwm1, ff_pwm2, ff_pwm3]
 actual_xy_bag = rosbag.Bag("actual_xy.bag", 'w')
 
 def clamp_joint_position(joint_idx, desired_joint_theta):
-	lower_limit = joint_limits[joint_idx,0]
-	upper_limit = joint_limits[joint_idx,1]
+	lower_limit = joint_limits[joint_idx][0]
+	upper_limit = joint_limits[joint_idx][1]
 
 	if desired_joint_theta < lower_limit:
 		desired_joint_theta = lower_limit
@@ -83,7 +86,7 @@ def control_motor_positions(desired_motor_encs):
 		pid_compute_resp = pid_compute(position_error)
 
 		desired_motor_pwms[i].id = i
-		desired_motor_pwms[i].pwm = pid_compute_resp.output + joint_ffs[i]
+		desired_motor_pwms[i].pwm = int(pid_compute_resp.output + joint_ffs[i])
 
 
 def compute_actual_xy():
@@ -96,17 +99,20 @@ def compute_actual_xy():
 		actual_motor_theta = actual_motor_encs[i] / 4095 * (2*math.pi)
 
 		# convert actual from motor space to joint space
-		actual_joint_thetas.append(actual_motor_theta + joint_offsets[i])
+		actual_joint_thetas.append(actual_motor_theta - joint_offsets[i])
 
 	fk_compute_resp = fk_compute(*actual_joint_thetas)
-	
-	actual_x = Float32()
-	actual_x.data = fk_compute_resp.x
-	actual_xy_bag.write('actual_x', actual_x)
 
-	actual_y = Float32()
-	actual_y.data = fk_compute_resp.y
-	actual_xy_bag.write('actual_y', actual_y)
+	print("Actual x: " + str(fk_compute_resp.x))
+	print("Actual y: " + str(fk_compute_resp.y))
+	
+	# actual_x = Float32()
+	# actual_x.data = fk_compute_resp.x
+	# actual_xy_bag.write('actual_x', actual_x)
+
+	# actual_y = Float32()
+	# actual_y.data = fk_compute_resp.y
+	# actual_xy_bag.write('actual_y', actual_y)
 
 
 def process_kill_handler(sig, frame):
@@ -130,9 +136,9 @@ if __name__ == '__main__':
 		rospy.wait_for_service(joint_names[i] + "_pid_set_gains")
 		pid_set_gains = rospy.ServiceProxy(joint_names[i] + "_pid_set_gains", PIDSetGains)
 		try:
-			set_gains_resp = pid_set_gains(*joint_pid_dict[joint_names[i]])
+			set_gains_resp = pid_set_gains(*joint_pid_gains[i])
 			# confirm response via sum
-			if set_gains_resp.sum == int(sum(joint_pid_dict[joint_names[i]]))
+			if set_gains_resp.sum == int(sum(joint_pid_gains[i])):
 				print(joint_names[i] + ": pid gains checksum confirmed")
 			else:
 				print("Invalid response from PIDSetGains service")
@@ -159,12 +165,12 @@ if __name__ == '__main__':
 
 	# prompt user for desired (x,y) end-effector position in mm
 	# - TODO: replace this with trajectory_generation output
-	desired_x = float(input("Enter desired x position (mm):\n"))
-	desired_y = float(input("Enter desired y position (mm):\n"))
+	# desired_x = float(input("Enter desired x position (mm):\n"))
+	# desired_y = float(input("Enter desired y position (mm):\n"))
 
-	# convert mm to m before running ik
-	desired_x = desired_x / 1000.0
-	desired_y = desired_y / 1000.0
+	# # convert mm to m before running ik
+	desired_x = 400.0 / 1000.0
+	desired_y = 0.0 / 1000.0
 
 	# compute corresponding desired joint positions in radians
 	ik_compute_resp = ik_compute(desired_x, desired_y)
@@ -177,7 +183,7 @@ if __name__ == '__main__':
 		desired_joint_thetas[i] = clamp_joint_position(i, desired_joint_thetas[i])
 
 		# convert desired from joint space to motor space
-		desired_motor_theta = (desired_joint_thetas[i] - joint_offsets[i])
+		desired_motor_theta = (desired_joint_thetas[i] + joint_offsets[i])
 
 		# map motor position in radians to encoder space before starting pid control
 		desired_motor_encs.append(desired_motor_theta / (2*math.pi) * 4095)
@@ -187,6 +193,7 @@ if __name__ == '__main__':
 
 		for i in range(2):
 			motor_pwm_pub.publish(desired_motor_pwms[i])
+			# continue
 
 			# time.sleep(?) # TODO: might need to sleep between subsequent publishes (hopefully not)
 			# - look into batch publisher @Alex

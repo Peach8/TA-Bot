@@ -5,8 +5,8 @@ import numpy as np
 from control.srv import *
 
 # TODO: update geometry params
-L1 = 1.0
-L2 = 1.0
+L1 = 0.2
+L2 = 0.2
 
 
 def handle_fk_compute(req):
