@@ -157,10 +157,14 @@ if __name__ == '__main__':
 
 	rate = rospy.Rate(10) # Hz
 
-	# prompt user for desired (x,y) end-effector position
+	# prompt user for desired (x,y) end-effector position in mm
 	# - TODO: replace this with trajectory_generation output
-	desired_x = input("Enter desired x position:\n")
-	desired_y = input("Enter desired y position:\n")
+	desired_x = float(input("Enter desired x position (mm):\n"))
+	desired_y = float(input("Enter desired y position (mm):\n"))
+
+	# convert mm to m before running ik
+	desired_x = desired_x / 1000.0
+	desired_y = desired_y / 1000.0
 
 	# compute corresponding desired joint positions in radians
 	ik_compute_resp = ik_compute(desired_x, desired_y)
