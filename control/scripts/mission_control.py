@@ -20,16 +20,16 @@ desired_motor_pwm2 = SetMotorPWM()
 desired_motor_pwms = [desired_motor_pwm1, desired_motor_pwm2]
 
 # define constant motor properties
-# - TODO: add these offsets to motor values to convert to joint space @Alex
-joint1_offset = 0.0 # rad
-joint2_offset = 0.0 # rad
+# add these offsets to motor values to convert to joint space
+joint1_offset = math.pi # rad
+joint2_offset = math.pi # rad
 joint_offsets = [joint1_offset, joint2_offset]
 
-# - TODO: define min and max joint positions in radians @Alex
-joint1_min = 0.0       # rad
-joint1_max = 2*math.pi # rad
-joint2_min = 0.0       # rad
-joint2_max = 2*math.pi # rad
+# define min and max joint positions in radians
+joint1_min = -math.pi/2       # rad
+joint1_max = math.pi/2 # rad
+joint2_min = -2.28       # rad
+joint2_max = 2.28 # rad
 joint_limits = [[joint1_min,joint1_max], [joint2_min,joint2_max]]
 
 # - joint1 position control gains
@@ -92,8 +92,8 @@ def compute_actual_xy():
 	actual_joint_thetas = []
 	# convert from motor encoder space all the way back to operational space
 	for i in range(2):
-		# TODO: map motor position in encoder space back to radians @Alex
-		actual_motor_theta = actual_motor_encs[i] / _______
+		# map motor position in encoder space back to radians
+		actual_motor_theta = actual_motor_encs[i] / 4095 * (2*math.pi)
 
 		# convert actual from motor space to joint space
 		actual_joint_thetas.append(actual_motor_theta + joint_offsets[i])
@@ -179,8 +179,8 @@ if __name__ == '__main__':
 		# convert desired from joint space to motor space
 		desired_motor_theta = (desired_joint_thetas[i] - joint_offsets[i])
 
-		# TODO: map motor position in radians to encoder space before starting pid control @Alex
-		desired_motor_encs.append(desired_motor_theta * _______)
+		# map motor position in radians to encoder space before starting pid control
+		desired_motor_encs.append(desired_motor_theta / (2*math.pi) * 4095)
 
 	while not rospy.is_shutdown():
 		control_motor_positions(desired_motor_encs)
