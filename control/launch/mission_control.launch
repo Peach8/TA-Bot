@@ -1,4 +1,22 @@
 <launch>
+  <node
+    pkg="control"
+    type="mission_control.py"
+    name="mission_control"
+    output="screen"
+  />
+  <node
+    pkg="control"
+    type="ik_compute.py"
+    name="ik_compute"
+    output="screen"
+  />
+  <node
+    pkg="control"
+    type="fk_compute.py"
+    name="fk_compute"
+    output="screen"
+  />
   <node name="joint1_pid_service" pkg="control" type="PIDService.py">
     <remap from="pid_set_gains" to="joint1_pid_set_gains"/>
     <remap from="pid_set_output_limits" to="joint1_pid_set_output_limits"/>
@@ -14,12 +32,6 @@
     <remap from="pid_set_output_limits" to="joint3_pid_set_output_limits"/>
     <remap from="pid_compute" to="joint3_pid_compute"/>
   </node>
-  <node
-    pkg="control"
-    type="motor_tuning.py"
-    name="motor_tuning"
-    output="screen"
-  />
   <node
     pkg="motor"
     type="motor_read_write.py"

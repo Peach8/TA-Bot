@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy # Python library for ROS
 from sensor_msgs.msg import Image # Image is the message type
-from geometry_msgs.msg import Pose2D
+from geometry_msgs.msg import Point
 from cv_bridge import CvBridge # Package to convert between ROS and OpenCV Images
 import cv2 # OpenCV library
 import numpy as np
@@ -9,7 +9,7 @@ import numpy as np
 
 fiducials_detected = False
 area_thresh = 100 # TODO: tune on 80/20 setup
-paper_fiducial_pixel_pose = Pose2D() # data to be published (pixel coords of paper corner)
+paper_fiducial_pixel_pose = Point() # data to be published (pixel coords of paper corner)
 
 def callback(data):
 	# used to convert between ROS and OpenCV images
@@ -80,7 +80,7 @@ def callback(data):
 	key = cv2.waitKey(1)
 	if key%256 == 32: # SPACEBAR
 		if fiducials_detected:
-			# package Pose2D
+			# package Point
 			paper_fiducial_pixel_pose.x = paper_offset_coords[0]
 			paper_fiducial_pixel_pose.y = paper_offset_coords[1]
 
@@ -98,7 +98,7 @@ def detect_features():
 if __name__ == '__main__':
 	rospy.init_node('workspace_feature_detection', anonymous=True)
 	rospy.Subscriber('/perception/video_frames', Image, callback, queue_size=1)
-	pub = rospy.Publisher('/perception/paper_fiducial_pixel_coords', Pose2D, queue_size=1)
+	pub = rospy.Publisher('/perception/paper_fiducial_pixel_coords', Point, queue_size=1)
 
 	try:
 		detect_features()	
