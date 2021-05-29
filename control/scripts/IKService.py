@@ -23,6 +23,22 @@ def handle_ik_compute(req):
 
 	resp.theta1 = math.atan2(req.y,req.x) - math.atan2(k2,k1)
 
+	# Check for singularity conditions
+		# First check if y is negative.
+		# Second, check if the x,y is outside the range of the arm fully extended.
+		# Third, check if the x,y is inside the range of the arm fully collapsed. 
+		if desired_y < 0 :
+			print("Desired y is negative and unreachable")
+			resp.success = False
+			#set desired motor postion equal to the last desired motor position
+		elif desired_x^2 + desired_y^2 > 4:
+			print("Desired x, y is too big and outside of reachable workspace")
+			resp.success = False
+			#set desired motor postion equal to the last desired motor position
+		elif desired_x^2 + desired_y^2 < 2:
+			print("Desired x, y is too small and outside of reachable workspace")
+			resp.success = False
+			#set desired motor postion equal to the last desired motor position	
 	return resp
 
 
