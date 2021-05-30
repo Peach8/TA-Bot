@@ -8,12 +8,18 @@ from control.srv import *
 from motor.srv import *
 from motor.msg import *
 import time
+from enum import Enum
 
-# 1 - position only ; 2 - velocity only ; 3 - pos-->velo cascade
-CONTROL_APPROACH = 1
+class ControlApproach(Enum):
+	POSITION = 1
+	VELOCITY = 2
+	CASCADE = 3
+
+motor_controller = ControlApproach.POSITION
 
 # change when switching motors to tune
 joint_str = "joint1"
+joint_id_dict = {"joint1": 0, "joint2": 1, "joint3": 2}
 
 global actual_motor_position
 global actual_motor_velocity
@@ -22,18 +28,54 @@ desired_motor_pwm = SetMotorPWM()
 desired_motor_pwm.id = joint_id_dict[joint_str]
 
 # change the gains and re-run node
-kp_pos = 1.0
-kd_pos = 0.0
-ki_pos = 0.0
+# - joint1 position control gains
+kp_pos1 = 2.0
+kd_pos1 = 0.1
+ki_pos1 = 0.0
+ff_pwm1 = 0.0 # TODO: @Oph
+joint1_pos_pid_gains = [kp_pos1, kd_pos1, ki_pos1]
 
-kp_vel = 1.0
-kd_vel = 0.0
-ki_vel = 0.0
+# - joint2 position control gains
+kp_pos2 = 4.0
+kd_pos2 = 0.1
+ki_pos2 = 0.0
+ff_pwm2 = 0.0 # TODO: @Oph
+joint2_pos_pid_gains = [kp_pos2, kd_pos2, ki_pos2]
+
+# - joint3 position control gains
+kp_pos3 = 1.0
+kd_pos3 = 0.0
+ki_pos3 = 0.0
+ff_pwm3 = 0.0
+joint3_pos_pid_gains = [kp_pos3, kd_pos3, ki_pos3]
+
+joint_pos_pid_gains = [joint1_pos_pid_gains, joint2_pos_pid_gains, joint3_pos_pid_gains]
+
+# - joint1 velocity control gains
+kp_vel1 = 2.0
+kd_vel1 = 0.1
+ki_vel1 = 0.0
+ff_pwm1 = 0.0 # TODO: @Oph
+joint1_vel_pid_gains = [kp_vel1, kd_vel1, ki_vel1]
+
+# - joint2 velocity control gains
+kp_vel2 = 4.0
+kd_vel2 = 0.1
+ki_vel2 = 0.0
+ff_pwm2 = 0.0 # TODO: @Oph
+joint2_vel_pid_gains = [kp_vel2, kd_vel2, ki_vel2]
+
+# - joint3 velocity control gains
+kp_vel3 = 1.0
+kd_vel3 = 0.0
+ki_vel3 = 0.0
+ff_pwm3 = 0.0
+joint3_vel_pid_gains = [kp_vel3, kd_vel3, ki_vel3]
+
+joint_vel_pid_gains = [joint1_vel_pid_gains, joint2_vel_pid_gains, joint3_vel_pid_gains]
 
 global ff_pwm
 ff_pwm = 0 # int
-
-joint_id_dict = {"joint1": 0, "joint2": 1, "joint3": 2}
 
 min_motor_position = 450
 max_motor_position = 925
@@ -41,12 +83,12 @@ max_motor_position = 925
 max_motor_velocity = 1023 # signed 10-bit int with units 0.229 rpm/bit
 
 
-if CONTROL_APPROACH == 1 or CONTROL_APPROACH == 3:
+if motor_controller is ControlApproach.POSITION or motor_controller is ControlApproach.CASCADE:
 	bag = rosbag.Bag('actual_position.bag', 'w')
-elif CONTROL_APPROACH == 2:
+elif motor_controller is ControlApproach.VELOCITY:
 	bag = rosbag.Bag('actual_velocity.bag', 'w')
 global bag_data
-bag_data Int32()
+bag_data = Int32()
 
 
 def control_motor_position(desired_motor_position):
@@ -81,7 +123,7 @@ def control_motor_velocity(desired_motor_velocity):
 	return pid_compute_resp.output
 
 
-def cascade_control(desired_motor_position);
+def cascade_control(desired_motor_position):
 	desired_motor_velocity = control_motor_position(desired_motor_position)
 	return control_motor_velocity(desired_motor_velocity)
 
@@ -112,18 +154,18 @@ if __name__ == '__main__':
 	rospy.wait_for_service('get_motor_position')
 	get_motor_position = rospy.ServiceProxy('get_motor_position', GetMotorPosition)
 
-	rospy.wait_for_service('get_motor_velocity')
-	get_motor_velocity = rospy.ServiceProxy('get_motor_velocity, GetMotorVelocity')
+	# rospy.wait_for_service('get_motor_velocity')
+	# get_motor_velocity = rospy.ServiceProxy('get_motor_velocity, GetMotorVelocity')
 
 	# set up position pid service proxies
-	if CONTROL_APPROACH == 1 or CONTROL_APPROACH == 3:
+	if motor_controller is ControlApproach.POSITION or motor_controller is ControlApproach.CASCADE:
 		rospy.wait_for_service(joint_str + "_pos_pid_set_gains")
 		pid_set_gains = rospy.ServiceProxy(joint_str + "_pos_pid_set_gains", PIDSetGains)
 		try:
-			set_gains_resp = pid_set_gains(kp_pos,kd_pos,ki_pos)
+			set_gains_resp = pid_set_gains(*joint_pos_pid_gains[joint_id_dict[joint_str]])
 
 			# confirm response via sum
-			if set_gains_resp.sum == int(kp_pos+kd_pos+ki_pos):
+			if set_gains_resp.sum == int(sum(joint_pos_pid_gains[joint_id_dict[joint_str]])):
 				print("pid gain checksum confirmed")
 			else:
 				print("Invalid response from PIDSetGains service")
@@ -135,14 +177,14 @@ if __name__ == '__main__':
 		pid_compute = rospy.ServiceProxy(joint_str + "_pos_pid_compute", PIDCompute)
 
 	# set up velocity pid service proxies
-	if CONTROL_APPROACH == 2 or CONTROL_APPROACH == 3:
+	if motor_controller is ControlApproach.VELOCITY or motor_controller is ControlApproach.CASCADE:
 		rospy.wait_for_service(joint_str + "_vel_pid_set_gains")
 		pid_set_gains = rospy.ServiceProxy(joint_str + "_vel_pid_set_gains", PIDSetGains)
 		try:
-			set_gains_resp = pid_set_gains(kp_vel,kd_vel,ki_vel)
+			set_gains_resp = pid_set_gains(*joint_vel_pid_gains[joint_id_dict[joint_str]])
 
 			# confirm response via sum
-			if set_gains_resp.sum == int(kp_vel+kd_vel+ki_vel):
+			if set_gains_resp.sum == int(sum(joint_vel_pid_gains[joint_id_dict[joint_str]])):
 				print("pid gain checksum confirmed")
 			else:
 				print("Invalid response from PIDSetGains service")
@@ -157,7 +199,7 @@ if __name__ == '__main__':
 	# set up publisher to write desired PWM to each motor (subscriber established in motor/read_write_node)
 	set_motor_pwm_pub = rospy.Publisher('set_motor_pwm', SetMotorPWM, queue_size=10)
 
-	if CONTROL_APPROACH == 1 or CONTROL_APPROACH == 3:
+	if motor_controller is ControlApproach.POSITION or motor_controller is ControlApproach.CASCADE:
 		set_motor_position_pub = rospy.Publisher('set_motor_position', SetMotorPosition, queue_size=10)
 		target_start_position = SetMotorPosition()
 
@@ -170,25 +212,25 @@ if __name__ == '__main__':
 	# rospy.spin()
 	time.sleep(1)
 
-	if CONTROL_APPROACH == 1 or CONTROL_APPROACH == 3:
+	if motor_controller is ControlApproach.POSITION or motor_controller is ControlApproach.CASCADE:
 		# print current position of the motor and prompt user for desired position
 		get_motor_position_resp = get_motor_position(joint_id_dict[joint_str])
 		print("current motor position (encoder space): " + str(get_motor_position_resp.position))
 
 		desired_motor_position = int(input("enter desired motor position (12-bit):\n"))
 		check_motor_position_bounds(desired_motor_position)
-	elif CONTROL_APPROACH == 2:
+	elif motor_controller is ControlApproach.VELOCITY:
 		# prompt user for desired velocity
 		desired_motor_velocity = int(input("enter desired motor velocity (10-bit):\n"))
 		check_motor_position_bounds(desired_motor_velocity)
 	
 
 	while not rospy.is_shutdown():
-		if CONTROL_APPROACH == 1:
+		if motor_controller is ControlApproach.POSITION:
 			desired_motor_pwm.pwm = control_motor_position(desired_motor_position) + ff_pwm
-		elif CONTROL_APPROACH == 2:
+		elif motor_controller is ControlApproach.VELOCITY:
 			desired_motor_pwm.pwm = control_motor_velocity(desired_motor_velocity) + ff_pwm
-		elif CONTROL_APPROACH == 3:
+		elif motor_controller is ControlApproach.CASCADE:
 			desired_motor_pwm.pwm = cascade_control(desired_motor_position) + ff_pwm
 
 		set_motor_pwm_pub.publish(desired_motor_pwm)
