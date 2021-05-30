@@ -10,14 +10,14 @@ from control.srv import *
 from motor.srv import *
 from motor.msg import *
 
-# desired_traj_x = 0.209
-# desired_traj_y_start = 0.079
-# traj_step = 0.01
-# desired_traj_xy = []
-# for i in range(10):
-# 	desired_traj_xy.append([desired_traj_x, desired_traj_y_start + i*traj_step])
+desired_traj_x = 0.209
+desired_traj_y_start = 0.079
+traj_step = 0.01
+desired_traj_xy = []
+for i in range(10):
+	desired_traj_xy.append([desired_traj_x, desired_traj_y_start + i*traj_step])
 
-desired_traj_xy = [[0.209,0.079],[0.1,0.1]]
+
 
 # define global variables
 global actual_motor_encs
@@ -26,13 +26,18 @@ global actual_xy
 actual_xy = [0.0,0.0]
 xy_epsilon = 0.01
 
-global desired_motor_pwm1
-global desired_motor_pwm2
-desired_motor_pwm1 = SetMotorPWM()
-desired_motor_pwm1.id = 0
-desired_motor_pwm2 = SetMotorPWM()
-desired_motor_pwm2.id = 1
-desired_motor_pwms = [desired_motor_pwm1, desired_motor_pwm2]
+global desired_motor_pwm
+desired_motor_pwm = BulkSetPWM()
+desired_motor_pwm.id1 = 0
+desired_motor_pwm.id2 = 1
+desired_motor_pwm.id3 = 2
+# global desired_motor_pwm1
+# global desired_motor_pwm2
+# desired_motor_pwm1 = SetMotorPWM()
+# desired_motor_pwm1.id = 0
+# desired_motor_pwm2 = SetMotorPWM()
+# desired_motor_pwm2.id = 1
+# desired_motor_pwms = [desired_motor_pwm1, desired_motor_pwm2]
 
 joint_names = ["joint1", "joint2", "joint3"]
 
@@ -89,13 +94,18 @@ def clamp_joint_position(joint_idx, desired_joint_theta):
 
 
 def control_motor_positions(desired_motor_encs):
-	global desired_motor_pwm1
-	global desired_motor_pwm2
+	global desired_motor_pwm
+	# global desired_motor_pwm1
+	# global desired_motor_pwm2
 	global actual_motor_encs
 
+	bulk_pos_response = get_motor_position()
+	# in encoder space [0-4095]
+	actual_motor_encs = [bulk_pos_response.value1, bulk_pos_response.value2, bulk_pos_response.value3]
+
+	desired_motor_pwm.value3 = 0
+
 	for i in range(2):
-		get_motor_position_resp = get_motor_position(i)
-		actual_motor_encs[i] = get_motor_position_resp.position # in encoder space [0-4095]
 
 		if actual_motor_encs[i] != 0:
 			# print("get_motor_position + " + str(i) + ": " + str(actual_motor_encs[i]))	
@@ -104,7 +114,10 @@ def control_motor_positions(desired_motor_encs):
 
 			pid_compute_resp = pid_compute(position_error)
 
-			desired_motor_pwms[i].pwm = int(pid_compute_resp.output + joint_ffs[i])
+			if i == 0:
+					desired_motor_pwm.value1 = int(pid_compute_resp.output + joint_ffs[i])
+			elif i == 1:
+					desired_motor_pwm.value2 = int(pid_compute_resp.output + joint_ffs[i])
 
 		# print("desired motor pwm1: " + str(desired_motor_pwms[0].pwm))
 		# print("desired motor pwm2: " + str(desired_motor_pwms[1].pwm))
@@ -140,17 +153,17 @@ def compute_actual_xy():
 	# actual_xy_bag.write('actual_y', actual_y)
 
 
-def pen_down():
-	pen_up = SetMotorPosition()
-	pen_up.id = 2
-	pen_up.position = # add the desired point
-	set_motor_position_pub.publish(pen_up.position)
+# def pen_down():
+# 	pen_up = SetMotorPosition()
+# 	pen_up.id = 2
+# 	pen_up.position = # add the desired point
+# 	set_motor_position_pub.publish(pen_up.position)
 
-def pen_up():
-	pen_down = SetMotorPosition()
-	pen_down.id = 2
-	pen_down.position = #add desired point
-	set_motor_position.pub.publish(pen_down.position)
+# def pen_up():
+# 	pen_down = SetMotorPosition()
+# 	pen_down.id = 2
+# 	pen_down.position = #add desired point
+# 	set_motor_position.pub.publish(pen_down.position)
 
 
 def process_kill_handler(sig, frame):
@@ -164,11 +177,10 @@ def process_kill_handler(sig, frame):
 
 def stop_motors():
 	# write zero pwm
-	desired_motor_pwm1.pwm = 0
-	motor_pwm_pub.publish(desired_motor_pwms[0])
-
-	desired_motor_pwm2.pwm = 0
-	motor_pwm_pub.publish(desired_motor_pwms[1])
+	desired_motor_pwm.value1 = 0
+	desired_motor_pwm.value2 = 0
+	desired_motor_pwm.value3 = 0
+	motor_pwm_pub.publish(desired_motor_pwm)
 
 
 if __name__ == '__main__':
@@ -201,11 +213,11 @@ if __name__ == '__main__':
 
 
 	# - get actual motor position via encoder
-	rospy.wait_for_service("get_motor_position")
-	get_motor_position = rospy.ServiceProxy("get_motor_position", GetMotorPosition)
+	rospy.wait_for_service("bulk_get_position")
+	get_motor_position = rospy.ServiceProxy('bulk_get_position', BulkGet)
 
 	# - command desired motor pwm
-	motor_pwm_pub = rospy.Publisher("set_motor_pwm", SetMotorPWM, queue_size=10)
+	motor_pwm_pub = rospy.Publisher('bulk_set_pwm', BulkSetPWM, queue_size=10)
 
 	# set up services/pub/subs that are separate from control
 	rospy.wait_for_service("fk_compute")
@@ -213,7 +225,7 @@ if __name__ == '__main__':
 
 	set_motor_position_pub = rospy.Publisher('set_motor_position', SetMotorPosition) #add set motor position
 
-	rate = rospy.Rate(10) # Hz
+	rate = rospy.Rate(50) # Hz
 
 	# prompt user for desired (x,y) end-effector position in mm
 	# - TODO: replace this with trajectory_generation output
@@ -260,8 +272,9 @@ if __name__ == '__main__':
 			while True:
 				control_motor_positions(desired_motor_encs)
 
+
 				for j in range(2):
-					motor_pwm_pub.publish(desired_motor_pwms[j])
+					motor_pwm_pub.publish(desired_motor_pwm)
 					# continue
 
 				compute_actual_xy()

@@ -161,7 +161,6 @@ def bulk_get_pos(req):
     if dxl_getdata_result != True:
         print("[ID:%03d] groupBulkReadPos getdata failed" % DXL_ID3)
         quit()
-    print('checked for successful data pull')
 
     # Get present position value
     resp = BulkGetResponse()
