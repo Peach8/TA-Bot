@@ -140,6 +140,19 @@ def compute_actual_xy():
 	# actual_xy_bag.write('actual_y', actual_y)
 
 
+def pen_down():
+	pen_up = SetMotorPosition()
+	pen_up.id = 2
+	pen_up.position = # add the desired point
+	set_motor_position_pub.publish(pen_up.position)
+
+def pen_up():
+	pen_down = SetMotorPosition()
+	pen_down.id = 2
+	pen_down.position = #add desired point
+	set_motor_position.pub.publish(pen_down.position)
+
+
 def process_kill_handler(sig, frame):
 	print("closing bags...")
 	actual_xy_bag.close() # close rosbag on CTRL+C
@@ -198,6 +211,8 @@ if __name__ == '__main__':
 	rospy.wait_for_service("fk_compute")
 	fk_compute = rospy.ServiceProxy("fk_compute", FKCompute)
 
+	set_motor_position_pub = rospy.Publisher('set_motor_position', SetMotorPosition) #add set motor position
+
 	rate = rospy.Rate(10) # Hz
 
 	# prompt user for desired (x,y) end-effector position in mm
@@ -224,6 +239,8 @@ if __name__ == '__main__':
 
 			print("desired theta1: " + str(desired_joint_thetas[0]))
 			print("desired theta2: " + str(desired_joint_thetas[1]))
+
+
 
 			desired_motor_encs = []
 			for j in range(2):
