@@ -1,1 +1,1 @@
-Point[] trajectory
+geometry_msgs/Point[] trajectory
