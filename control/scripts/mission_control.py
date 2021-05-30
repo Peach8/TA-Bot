@@ -10,19 +10,21 @@ from control.srv import *
 from motor.srv import *
 from motor.msg import *
 
-desired_traj_x = 0.209
-desired_traj_y_start = 0.079
-traj_step = 0.01
-desired_traj_xy = []
-for i in range(10):
-	desired_traj_xy.append([desired_traj_x, desired_traj_y_start + i*traj_step])
+# desired_traj_x = 0.209
+# desired_traj_y_start = 0.079
+# traj_step = 0.01
+# desired_traj_xy = []
+# for i in range(10):
+# 	desired_traj_xy.append([desired_traj_x, desired_traj_y_start + i*traj_step])
+
+desired_traj_xy = [[0.209,0.079],[0.1,0.1]]
 
 # define global variables
 global actual_motor_encs
 actual_motor_encs = [0,0]
 global actual_xy
 actual_xy = [0.0,0.0]
-xy_epsilon = 0.005
+xy_epsilon = 0.01
 
 global desired_motor_pwm1
 global desired_motor_pwm2
@@ -214,6 +216,10 @@ if __name__ == '__main__':
 
 			# compute corresponding desired joint positions in radians
 			ik_compute_resp = ik_compute(desired_x, desired_y)
+			if not ik_compute_resp.success:
+				stop_motors()
+				sys.exit(0)
+
 			desired_joint_thetas = [ik_compute_resp.theta1, ik_compute_resp.theta2]
 
 			print("desired theta1: " + str(desired_joint_thetas[0]))
