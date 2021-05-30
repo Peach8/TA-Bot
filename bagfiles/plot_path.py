@@ -8,7 +8,7 @@ import numpy as np
 import re
 
 # text_filter = ".*joint1_kp2.*"
-text_filter = ".*actual_position.*"
+text_filter = ".*actual_xy.*"
 
 def identify_bags():
     path = '/home/alex/.ros/'

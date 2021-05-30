@@ -4,8 +4,9 @@ import time
 import rospy
 from motor.srv import *
 from motor.msg import *
+import random
 
-m1_range = [1200, 2800]
+m_range = [1400, 2600]
 DXL_ID1                     = 0                 # Motor For Joint 1: 1
 DXL_ID2                     = 1                 # Motor for Joint 2: 2
 DXL_ID3                     = 2                 # Motor for Joint 3: 3
@@ -14,38 +15,29 @@ MOTOR_IDs = [DXL_ID1, DXL_ID2]         #
     
 def read_motor_pos():
     #declare ServiceProxy to read the motor position
-    rospy.wait_for_service('get_position')
-    motor_pos = rospy.ServiceProxy('get_position', GetMotorPosition)
+    rospy.wait_for_service('bulk_get_position')
+    bulk_motor_pos = rospy.ServiceProxy('bulk_get_position', BulkGet)
     try:
-        # attempt to read motor positions. returns an array of positions.
-        # return [motor_pos(DXL_ID1).position, motor_pos(DXL_ID2).position, motor_pos(DXL_ID3).position]
-        return [motor_pos(DXL_ID1).position, motor_pos(DXL_ID2).position]
+        bulk_pos_response = bulk_motor_pos()
+        return [bulk_pos_response.value1, bulk_pos_response.value2, bulk_pos_response.value3]
 
     except rospy.ServiceException as e:
         print("Service call failed: %s"%e)
 
 if __name__ == "__main__":
     #declare publisher to write motor position
-    rospy.init_node('motor_pos_writer')
-    motor_writer = rospy.Publisher('set_position', SetPosition, queue_size=10)
+    rospy.init_node('motor_pwm_writer')
+    motor_writer = rospy.Publisher('bulk_set_pwm', BulkSetPWM, queue_size=10)
 
     #decalares a target position variable of SetPosition data type (msg)
-    target_pos = SetPosition()
+    target_pwm = BulkSetPWM()
     print('MotorWriter Initialized...')
 
-    #set motors to min positions
-    rate = rospy.Rate(.25)
-    for (m_id,m_pos) in zip(MOTOR_IDs,[1200, 1200]):
-        target_pos.id = m_id
-        target_pos.position = m_pos
-        print(f'{target_pos}')
-        motor_writer.publish(target_pos)
-    rate.sleep()
-
     #set the command rate in Hz
-    rate = rospy.Rate(10)
+    rate = rospy.Rate(100)
     positions = []
-    n = 200
+    directions = [1, 1]
+    n = 1000
     tic = time.perf_counter()
 
     for i in range(n):
@@ -53,25 +45,42 @@ if __name__ == "__main__":
         positions.append(read_motor_pos())
         print(positions[i])
 
-        #move to new position
-        #loop will fail if the motor IDs are changed
+        # move to new position
+        # loop will fail if the motor IDs are changed
+
         for (m_id,m_pos) in zip(MOTOR_IDs,positions[i]):
-            target_pos.id = m_id
-            target_pos.position = m_pos+5
-            print(f'{target_pos}')
-
-            #check if motor is within its range of motion
-            if target_pos.position < m1_range[0] or target_pos.position > m1_range[1]:
-                #reset to middle of range of motion if out of bound
-                target_pos.position = m1_range[0]
-
-            motor_writer.publish(target_pos)
+            if m_pos < m_range[0]:
+                directions[m_id] = 1
+            elif m_pos > m_range[1]:
+                directions[m_id] = -1
+            
+        target_pwm.id1 = DXL_ID1
+        target_pwm.id2 = DXL_ID2
+        target_pwm.id3 = DXL_ID3
+        pwm_val = pwm_val = random.randint(30, 200)
+        target_pwm.value1 = directions[DXL_ID1]*pwm_val
+        target_pwm.value2 = directions[DXL_ID2]*pwm_val
+        target_pwm.value3 = 0
+        print([target_pwm.value1,target_pwm.value2,target_pwm.value3])
+        motor_writer.publish(target_pwm)
         
         rate.sleep()
 
 
     toc = time.perf_counter()
     print(f"Motor Pos Sampling Rate: {n/(toc - tic):0.4f} Hz")
+
+    target_pwm.id1 = DXL_ID1
+    target_pwm.id2 = DXL_ID2
+    target_pwm.id3 = DXL_ID3
+    target_pwm.value1 = 0
+    target_pwm.value2 = 0
+    target_pwm.value3 = 0
+
+    motor_writer.publish(target_pwm)
+        
+
+
     # print(positions)
 
 

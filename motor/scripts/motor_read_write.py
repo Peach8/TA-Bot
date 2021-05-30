@@ -36,12 +36,13 @@ ADDR_TORQUE_ENABLE      = 64               # Control table address is different 
 ADDR_GOAL_POSITION      = 116              # [0, 4095]
 ADDR_GOAL_PWM           = 100              # [-885, 885]
 ADDR_PRESENT_POSITION   = 132              # 360DEG SCALED TO [0, 4095]
+ADDR_PRESENT_VELOCITY   = 128
 ADDR_OPERATING_MODE     = 11               # 1 VELOCITY / 3 POSITION / 4 EXT POSITION / 16 PWM
-ADDR_PRESENT_VELOCITY   = TBD              #
+ADDR_PRESENT_VELOCITY   = 128              # [REV / MIN]
 
 LEN_POSITION                = 4            # Data Byte Length
 LEN_PWM                     = 2            # Data Byte Length
-LEN_VELOCITY                = TBD          # Data Byte Length
+LEN_VELOCITY                = 4            # Data Byte Length
 
 # Protocol version
 PROTOCOL_VERSION            = 2.0               # See which protocol version is used in the Dynamixel
@@ -84,9 +85,11 @@ def set_goal_pos_callback(data):
 
 
 def set_motor_pwm_callback(data):
-    print("Set Goal PWM of ID %s = %s" % (data.id, data.pwm)
-    if data.pwm > MOTOR_CLAMP: data.pwm = MOTOR_CLAMP
-    if data.pwm < -MOTOR_CLAMP: data.pwm = -MOTOR_CLAMP
+    print("Set Goal PWM of ID %s = %s" % (data.id, data.pwm))
+    if data.pwm > MOTOR_CLAMP:
+        data.pwm = MOTOR_CLAMP
+    if data.pwm < -MOTOR_CLAMP:
+        data.pwm = -MOTOR_CLAMP
     dxl_comm_result, dxl_error = packetHandler.write2ByteTxRx(portHandler, data.id, ADDR_GOAL_PWM, data.pwm)
 
 def bulk_set_pwm_callback(data):
@@ -137,7 +140,7 @@ def bulk_read_pos_init():
         print("[ID:%03d] groupBulkReadPos addparam failed" % DXL_ID3)
         quit()
 
-def bulk_get_pos():
+def bulk_get_pos(req):
     # Bulkread present position and LED status
     dxl_comm_result = groupBulkReadPos.txRxPacket()
     if dxl_comm_result != COMM_SUCCESS:
@@ -158,6 +161,7 @@ def bulk_get_pos():
     if dxl_getdata_result != True:
         print("[ID:%03d] groupBulkReadPos getdata failed" % DXL_ID3)
         quit()
+    print('checked for successful data pull')
 
     # Get present position value
     resp = BulkGetResponse()
@@ -181,7 +185,7 @@ def bulk_read_vel_init():
         print("[ID:%03d] groupBulkReadVel addparam failed" % DXL_ID3)
         quit()
 
-def bulk_get_vel():
+def bulk_get_vel(req):
     # Bulkread present position and LED status
     dxl_comm_result = groupBulkReadPos.txRxPacket()
     if dxl_comm_result != COMM_SUCCESS:
@@ -213,18 +217,20 @@ def bulk_get_vel():
 
 
 def read_write_py_node():
+    print('starting node init')
     rospy.init_node('read_write_py_node')
 
     #Intitialize subscribers to publish motor values
     rospy.Subscriber('set_motor_position', SetMotorPosition, set_goal_pos_callback)
     rospy.Subscriber('set_motor_pwm', SetMotorPWM, set_motor_pwm_callback)
-    rospy.Subscriber('bulk_set_pwm', BulkSetIPWM, bulk_set_pwm_callback)
+    rospy.Subscriber('bulk_set_pwm', BulkSetPWM, bulk_set_pwm_callback)
 
     #Initialize services to read motor values
     rospy.Service('get_motor_position', GetMotorPosition, get_present_pos)
     rospy.Service('bulk_get_position', BulkGet, bulk_get_pos)
     rospy.Service('bulk_get_velocity', BulkGet, bulk_get_vel)
 
+    print('node init compelted. starting spin...')
     rospy.spin()
 
 def motor_shutdown():
@@ -294,17 +300,14 @@ def main():
         time.sleep(.1)
         print("DYNAMIXEL has been successfully connected")
 
-    print("Ready to get & set Position.")
 
-    read_write_py_node()
+    print("Ready to get & set Position.")
     bulk_read_pos_init()
-    bulk_read_vel_init()
+    read_write_py_node()
+    # bulk_read_vel_init()
+
+
+
 if __name__ == '__main__':
     main()
 
-
-
-''' code to read data
-data, dxl_comm_result, dxl_error = packetHandler.read4ByteTxRx(portHandler, DXL_ID2, ADDR_TORQUE_ENABLE)
-print(f'torque enaabled: {data}')
-'''

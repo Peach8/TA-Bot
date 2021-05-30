@@ -52,6 +52,7 @@ add_message_files(
   SetMotorPWM.msg
   SetMotorPosition.msg
   BulkSetItem.msg
+  BulkSetPWM.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -59,6 +60,7 @@ add_service_files(
   FILES
   GetMotorPosition.srv
   BulkGetItem.srv
+  BulkGet.srv
   SyncGetPosition.srv
 )
 
