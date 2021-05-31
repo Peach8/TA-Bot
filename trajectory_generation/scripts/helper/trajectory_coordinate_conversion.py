@@ -23,7 +23,7 @@ pixel_coords_arrs = [zero_pixel_coords, one_pixel_coords, two_pixel_coords, \
 
 global_coords_arrs = []
 for pixel_arr in pixel_coords_arrs:
-	global_coords_arrs.append(workspace_conversions.convert_pixels_to_mm(pixel_arr))
+	global_coords_arrs.append(workspace_conversions.convert_num_traj_pixels_to_mm(pixel_arr))
 
 np.savetxt('./number_trajectory_global_coords/zero.txt', global_coords_arrs[0])
 np.savetxt('./number_trajectory_global_coords/one.txt', global_coords_arrs[1])

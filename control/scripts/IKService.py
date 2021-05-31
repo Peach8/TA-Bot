@@ -4,7 +4,7 @@ import math
 from control.srv import *
 
 # TODO: update geometry params
-L1 = 0.2
+L1 = 0.2015
 L2 = 0.2
 
 def handle_ik_compute(req):

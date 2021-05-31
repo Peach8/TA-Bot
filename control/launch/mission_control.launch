@@ -1,5 +1,23 @@
 <launch>
   <node
+    pkg="perception"
+    type="webcam_pub.py"
+    name="webcam_pub"
+    output="screen"
+  />
+  <node
+    pkg="perception"
+    type="workspace_feature_detection.py"
+    name="workspace_feature_detection"
+    output="screen"
+  />
+  <node
+    pkg="trajectory_generation"
+    type="robot_trajectory_generation.py"
+    name="robot_trajectory_generation"
+    output="screen"
+  />
+  <node
     pkg="control"
     type="mission_control.py"
     name="mission_control"

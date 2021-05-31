@@ -28,7 +28,7 @@ else:
         return ch
 
 # Motor Clamping Value
-MOTOR_CLAMP             = 440              # CLAMP PWM FULL SCALE [-885, 885]
+MOTOR_CLAMP             = 300              # CLAMP PWM FULL SCALE [-885, 885]
 
 # Control table address
 ADDR_BAUD_RATE          = 8                # $
@@ -51,7 +51,7 @@ PROTOCOL_VERSION            = 2.0               # See which protocol version is 
 DXL_ID1                     = 0                 # Motor For Joint 1: 0
 DXL_ID2                     = 1                 # Motor for Joint 2: 1
 DXL_ID3                     = 2                 # Motor for Joint 3: 2
-BAUDRATE                    = 3000000           # Dynamixel default baudrate : 57600
+BAUDRATE                    = 4000000           # Dynamixel default baudrate : 57600
 DEVICENAME                  = '/dev/ttyUSB0'    # Check which port is being used on your controller
                                                 
 
@@ -75,7 +75,7 @@ def set_goal_pos_callback(data):
     dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, data.id, ADDR_OPERATING_MODE, 3)
     dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, data.id, ADDR_TORQUE_ENABLE, TORQUE_ENABLE)
 
-    print("Set Goal Position of ID %s = %s" % (data.id, data.position))
+    # print("Set Goal Position of ID %s = %s" % (data.id, data.position))
     dxl_comm_result, dxl_error = packetHandler.write4ByteTxRx(portHandler, data.id, ADDR_GOAL_POSITION, data.position)
     time.sleep(2)
 
@@ -85,14 +85,22 @@ def set_goal_pos_callback(data):
 
 
 def set_motor_pwm_callback(data):
-    print("Set Goal PWM of ID %s = %s" % (data.id, data.pwm))
-    if data.pwm > MOTOR_CLAMP:
-        data.pwm = MOTOR_CLAMP
-    if data.pwm < -MOTOR_CLAMP:
-        data.pwm = -MOTOR_CLAMP
+    # print("Set Goal PWM of ID %s = %s" % (data.id, data.pwm))
+    if data.pwm > MOTOR_CLAMP: data.pwm = MOTOR_CLAMP
+    elif data.pwm < -MOTOR_CLAMP: data.pwm = -MOTOR_CLAMP
     dxl_comm_result, dxl_error = packetHandler.write2ByteTxRx(portHandler, data.id, ADDR_GOAL_PWM, data.pwm)
 
 def bulk_set_pwm_callback(data):
+
+    if data.value1 > MOTOR_CLAMP: data.value1 = MOTOR_CLAMP
+    elif data.value1 < -MOTOR_CLAMP: data.value1 = -MOTOR_CLAMP
+    
+    if data.value2 > MOTOR_CLAMP: data.value2 = MOTOR_CLAMP
+    elif data.value2 < -MOTOR_CLAMP: data.value2 = -MOTOR_CLAMP
+
+    if data.value3 > MOTOR_CLAMP: data.value3 = MOTOR_CLAMP
+    elif data.value3 < -MOTOR_CLAMP: data.value3 = -MOTOR_CLAMP
+
     #Convert PWM Values to Byte Strings
     data_write1 = [DXL_LOBYTE(data.value1), DXL_HIBYTE(data.value1)]
     data_write2 = [DXL_LOBYTE(data.value2), DXL_HIBYTE(data.value2)]
@@ -122,7 +130,7 @@ def bulk_set_pwm_callback(data):
 
 def get_present_pos(req):
     dxl_present_position, dxl_comm_result, dxl_error = packetHandler.read4ByteTxRx(portHandler, req.id, ADDR_PRESENT_POSITION)
-    print("Present Position of ID %s = %s" % (req.id, dxl_present_position))
+    # print("Present Position of ID %s = %s" % (req.id, dxl_present_position))
     return dxl_present_position
 
 
@@ -216,7 +224,6 @@ def bulk_get_vel(req):
 
 
 def read_write_py_node():
-    print('starting node init')
     rospy.init_node('read_write_py_node')
 
     #Intitialize subscribers to publish motor values
@@ -229,7 +236,6 @@ def read_write_py_node():
     rospy.Service('bulk_get_position', BulkGet, bulk_get_pos)
     rospy.Service('bulk_get_velocity', BulkGet, bulk_get_vel)
 
-    print('node init compelted. starting spin...')
     rospy.spin()
 
 def motor_shutdown():
@@ -300,7 +306,7 @@ def main():
         print("DYNAMIXEL has been successfully connected")
 
 
-    print("Ready to get & set Position.")
+    # print("Ready to get & set Position.")
     bulk_read_pos_init()
     read_write_py_node()
     # bulk_read_vel_init()

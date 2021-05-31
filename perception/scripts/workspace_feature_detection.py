@@ -74,7 +74,6 @@ def callback(data):
 
 	paper_fiducial_pixel_pose.x = 0
 	paper_fiducial_pixel_pose.y = 0
-	paper_fiducial_pixel_pose.theta = 0
 
 	## after click SPACEBAR, save base frame and paper fiducial pixel coords for conversion
 	key = cv2.waitKey(1)

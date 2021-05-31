@@ -16,7 +16,7 @@ class PIDService:
 		self.i_term_max = 1.0
 
 		self.prev_error = 0.0
-		self.update_hz = 10
+		self.update_hz = 60
 		self.output_min = -math.inf
 		self.output_max = math.inf
 

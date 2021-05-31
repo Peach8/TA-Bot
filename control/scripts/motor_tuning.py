@@ -24,13 +24,19 @@ joint_id_dict = {"joint1": 0, "joint2": 1, "joint3": 2}
 global actual_motor_position
 global actual_motor_velocity
 
-desired_motor_pwm = SetMotorPWM()
-desired_motor_pwm.id = joint_id_dict[joint_str]
+desired_motor_pwm = BulkSetPWM()
+desired_motor_pwm.id1 = 0
+desired_motor_pwm.id2 = 1
+desired_motor_pwm.id3 = 2
+desired_motor_pwm.value1 = 0
+desired_motor_pwm.value2 = 0
+desired_motor_pwm.value3 = 0
+# desired_motor_pwm.id = joint_id_dict[joint_str]
 
 # change the gains and re-run node
 # - joint1 position control gains
-kp_pos1 = 2.0
-kd_pos1 = 0.1
+kp_pos1 = 10.0
+kd_pos1 = 0.15
 ki_pos1 = 0.0
 ff_pwm1 = 0.0 # TODO: @Oph
 joint1_pos_pid_gains = [kp_pos1, kd_pos1, ki_pos1]
@@ -77,8 +83,8 @@ joint_vel_pid_gains = [joint1_vel_pid_gains, joint2_vel_pid_gains, joint3_vel_pi
 global ff_pwm
 ff_pwm = 0 # int
 
-min_motor_position = 450
-max_motor_position = 925
+min_motor_position = 990
+max_motor_position = 3000
 
 max_motor_velocity = 1023 # signed 10-bit int with units 0.229 rpm/bit
 
@@ -90,13 +96,47 @@ elif motor_controller is ControlApproach.VELOCITY:
 global bag_data
 bag_data = Int32()
 
+def pen_down():
+	stop_motors()
+	time.sleep(2)
+	pen_down_msg = SetMotorPosition()
+	pen_down_msg.id = 2
+	pen_down_msg.position = 875
+	set_motor_position_pub.publish(pen_down_msg)
+	time.sleep(2)
+
+def pen_up():
+	stop_motors()
+	time.sleep(2)
+	pen_up_msg = SetMotorPosition()
+	pen_up_msg.id = 2
+	pen_up_msg.position = 450
+	set_motor_position_pub.publish(pen_up_msg)
+	time.sleep(2)
+
+
+def stop_motors():
+	# write zero pwm
+	# print("stopping motors...")
+	desired_motor_pwm.value1 = 0
+	desired_motor_pwm.value2 = 0
+	desired_motor_pwm.value3 = 0
+	set_motor_pwm_pub.publish(desired_motor_pwm)
 
 def control_motor_position(desired_motor_position):
 	global ff_pwm
 	global bag_data
+	global actual_motor_position
 
-	get_motor_position_resp = get_motor_position(joint_id_dict[joint_str])
-	actual_motor_position = get_motor_position_resp.position
+	get_motor_position_resp = get_motor_position()
+	if joint_id_dict[joint_str] == 0:
+		actual_motor_position = get_motor_position_resp.value1
+	elif joint_id_dict[joint_str] == 1:
+		actual_motor_position = get_motor_position_resp.value2
+	elif joint_id_dict[joint_str] == 2:
+		actual_motor_position = get_motor_position_resp.value3
+
+	print(f'actual motor position: {actual_motor_position}')
 
 	bag_data.data = actual_motor_position
 	bag.write('actual_value', bag_data)	
@@ -104,7 +144,7 @@ def control_motor_position(desired_motor_position):
 	position_error = desired_motor_position - actual_motor_position
 
 	pid_compute_resp = pid_compute(position_error)
-	return pid_compute_resp.outpout
+	return pid_compute_resp.output
 
 
 def control_motor_velocity(desired_motor_velocity):
@@ -143,6 +183,7 @@ def check_motor_velocity_bounds(desired_motor_velocity):
 def process_kill_handler(sig, frame):
 	print("closing bag...")
 	bag.close() # close rosbag on CTRL+C
+	stop_motors()
 	sys.exit(0)
 
 if __name__ == '__main__':
@@ -151,11 +192,16 @@ if __name__ == '__main__':
 	rospy.init_node("motor_tuning", anonymous=True)
 
 	# set up motor position and velocity service proxies (established in motor/read_write_node)
-	rospy.wait_for_service('get_motor_position')
-	get_motor_position = rospy.ServiceProxy('get_motor_position', GetMotorPosition)
+	rospy.wait_for_service('bulk_get_position')
+	get_motor_position = rospy.ServiceProxy('bulk_get_position', BulkGet)
 
+	set_motor_position_pub = rospy.Publisher('set_motor_position', SetMotorPosition, queue_size=10)
 	# rospy.wait_for_service('get_motor_velocity')
 	# get_motor_velocity = rospy.ServiceProxy('get_motor_velocity, GetMotorVelocity')
+	
+	# set up publisher to write desired PWM to each motor (subscriber established in motor/read_write_node)
+	set_motor_pwm_pub = rospy.Publisher('bulk_set_pwm', BulkSetPWM, queue_size=10)
+	pen_up()
 
 	# set up position pid service proxies
 	if motor_controller is ControlApproach.POSITION or motor_controller is ControlApproach.CASCADE:
@@ -195,27 +241,31 @@ if __name__ == '__main__':
 		rospy.wait_for_service(joint_str + "_vel_pid_compute")
 		pid_compute = rospy.ServiceProxy(joint_str + "_vel_pid_compute", PIDCompute)
 
-
-	# set up publisher to write desired PWM to each motor (subscriber established in motor/read_write_node)
-	set_motor_pwm_pub = rospy.Publisher('set_motor_pwm', SetMotorPWM, queue_size=10)
-
 	if motor_controller is ControlApproach.POSITION or motor_controller is ControlApproach.CASCADE:
 		set_motor_position_pub = rospy.Publisher('set_motor_position', SetMotorPosition, queue_size=10)
 		target_start_position = SetMotorPosition()
 
 		time.sleep(1)
 		target_start_position.id = joint_id_dict[joint_str]
-		target_start_position.position = 450
+		target_start_position.position = 2000
 		set_motor_position_pub.publish(target_start_position)
+		time.sleep(1)
+		pen_down()
 
-	rate = rospy.Rate(10) # Hz
+	rate = rospy.Rate(60) # Hz
 	# rospy.spin()
-	time.sleep(1)
+	# time.sleep(1)
 
 	if motor_controller is ControlApproach.POSITION or motor_controller is ControlApproach.CASCADE:
 		# print current position of the motor and prompt user for desired position
-		get_motor_position_resp = get_motor_position(joint_id_dict[joint_str])
-		print("current motor position (encoder space): " + str(get_motor_position_resp.position))
+		get_motor_position_resp = get_motor_position()
+		if joint_id_dict[joint_str] == 0:
+			print("current motor position (encoder space): " + str(get_motor_position_resp.value1))
+		elif joint_id_dict[joint_str] == 1:
+			print("current motor position (encoder space): " + str(get_motor_position_resp.value2))
+		elif joint_id_dict[joint_str] == 2:
+			print("current motor position (encoder space): " + str(get_motor_position_resp.value3))
+
 
 		desired_motor_position = int(input("enter desired motor position (12-bit):\n"))
 		check_motor_position_bounds(desired_motor_position)
@@ -224,15 +274,33 @@ if __name__ == '__main__':
 		desired_motor_velocity = int(input("enter desired motor velocity (10-bit):\n"))
 		check_motor_position_bounds(desired_motor_velocity)
 	
-
 	while not rospy.is_shutdown():
-		if motor_controller is ControlApproach.POSITION:
-			desired_motor_pwm.pwm = control_motor_position(desired_motor_position) + ff_pwm
-		elif motor_controller is ControlApproach.VELOCITY:
-			desired_motor_pwm.pwm = control_motor_velocity(desired_motor_velocity) + ff_pwm
-		elif motor_controller is ControlApproach.CASCADE:
-			desired_motor_pwm.pwm = cascade_control(desired_motor_position) + ff_pwm
 
+		if motor_controller is ControlApproach.POSITION:
+			if joint_id_dict[joint_str] == 0:
+				desired_motor_pwm.value1 = control_motor_position(desired_motor_position) + ff_pwm
+			elif joint_id_dict[joint_str] == 1:
+				desired_motor_pwm.value2 = control_motor_position(desired_motor_position) + ff_pwm
+			elif joint_id_dict[joint_str] == 2:
+				desired_motor_pwm.value3 = control_motor_position(desired_motor_position) + ff_pwm
+
+		elif motor_controller is ControlApproach.VELOCITY:
+			if joint_id_dict[joint_str] == 0:
+				desired_motor_pwm.value1 = control_motor_velocity(desired_motor_velocity) + ff_pwm
+			elif joint_id_dict[joint_str] == 1:
+				desired_motor_pwm.value2 = control_motor_velocity(desired_motor_velocity) + ff_pwm
+			elif joint_id_dict[joint_str] == 2:
+				desired_motor_pwm.value3 = control_motor_velocity(desired_motor_velocity) + ff_pwm
+
+		elif motor_controller is ControlApproach.CASCADE:
+			if joint_id_dict[joint_str] == 0:
+				desired_motor_pwm.value1 = cascade_control(desired_motor_position) + ff_pwm
+			elif joint_id_dict[joint_str] == 1:
+				desired_motor_pwm.value2 = cascade_control(desired_motor_position) + ff_pwm
+			elif joint_id_dict[joint_str] == 2:
+				desired_motor_pwm.value3 = cascade_control(desired_motor_position) + ff_pwm
+
+		print(desired_motor_pwm)
 		set_motor_pwm_pub.publish(desired_motor_pwm)
 
 		# sleep enough to maintain desired rate
