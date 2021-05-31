@@ -164,6 +164,8 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
    scripts/PIDService.py
+   scripts/PIDService1.py
+   scripts/PIDService2.py
    scripts/FKService.py
    scripts/motor_tuning.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

@@ -3,7 +3,7 @@ import rospy
 import math
 from control.srv import *
 
-class PIDService:
+class PIDService2:
 	def __init__(self):
 		self.kp = 0.0
 		self.kd = 0.0
@@ -20,9 +20,9 @@ class PIDService:
 		self.output_min = -math.inf
 		self.output_max = math.inf
 
-		rospy.Service('pid_set_gains', PIDSetGains, self.handle_pid_set_gains)
-		rospy.Service('pid_compute', PIDCompute, self.handle_pid_compute)
-		rospy.Service('pid_set_output_limits', PIDSetOutputLimits, self. handle_pid_set_output_limits)
+		rospy.Service('pid_set_gains2', PIDSetGains, self.handle_pid_set_gains)
+		rospy.Service('pid_compute2', PIDCompute, self.handle_pid_compute)
+		rospy.Service('pid_set_output_limits2', PIDSetOutputLimits, self. handle_pid_set_output_limits)
 
 	def handle_pid_set_gains(self,req):
 		self.kp = req.kp
@@ -35,7 +35,7 @@ class PIDService:
 		print(f'self.ki = {req.ki}')
 		# reset integrator term when new gains are defined
 		self.i_term = 0
-		rospy.loginfo(f'set gains: printing gains...{[self.kp,self.kd,self.ki]}')
+		rospy.loginfo(f'set gains_2: printing gains...{[self.kp,self.kd,self.ki]}')
 
 		# check sum on client side to confirm update
 		return int(req.kp + req.kd + req.ki)
@@ -66,15 +66,15 @@ class PIDService:
 
 		self.prev_error = req.error
 
-		rospy.loginfo(f'compute: printing gains...{[self.kp,self.kd,self.ki]}')
-		rospy.loginfo(f'compute: computing pwm... error: {req.error} / output: {output}')
+		rospy.loginfo(f'compute_2: printing gains...{[self.kp,self.kd,self.ki]}')
+		rospy.loginfo(f'compute_2: computing pwm... error: {req.error} / output: {output}')
 		
 		return int(output)
 
 
 if __name__ =="__main__":
-	rospy.init_node('pid_service',anonymous=True)
-	PIDService()
+	rospy.init_node('pid_service2',anonymous=True)
+	PIDService2()
 	rospy.spin()
 
 

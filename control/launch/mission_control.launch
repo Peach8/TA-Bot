@@ -35,21 +35,9 @@
     name="fk_service"
     output="screen"
   />
-  <node name="joint1_pid_service" pkg="control" type="PIDService.py">
-    <remap from="pid_set_gains" to="joint1_pid_set_gains"/>
-    <remap from="pid_set_output_limits" to="joint1_pid_set_output_limits"/>
-    <remap from="pid_compute" to="joint1_pid_compute"/>
-  </node>
-  <node name="joint2_pid_service" pkg="control" type="PIDService.py">
-    <remap from="pid_set_gains" to="joint2_pid_set_gains"/>
-    <remap from="pid_set_output_limits" to="joint2_pid_set_output_limits"/>
-    <remap from="pid_compute" to="joint2_pid_compute"/>
-  </node>
-  <node name="joint3_pid_service" pkg="control" type="PIDService.py">
-    <remap from="pid_set_gains" to="joint3_pid_set_gains"/>
-    <remap from="pid_set_output_limits" to="joint3_pid_set_output_limits"/>
-    <remap from="pid_compute" to="joint3_pid_compute"/>
-  </node>
+  <node pkg="control" type="PIDService1.py" name="pid_service1" output="screen" />
+  <node pkg="control" type="PIDService2.py" name="pid_service2" output="screen" /> 
+
   <node
     pkg="motor"
     type="motor_read_write.py"

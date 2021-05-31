@@ -20,6 +20,9 @@ ready_to_pub = False
 base_frame_offset_x_mm = 0
 base_frame_offset_y_mm = 146
 
+global sparsify_threshold
+sparsify_threshold = 0.0005
+
 traj_width_pixel = 200
 traj_height_pixel = 250
 traj_width_global = 50 #workspace_conversions.convert_pixels_to_mm(traj_width_pixel)
@@ -55,16 +58,21 @@ def callback(data):
 			global_point = Point()
 			global_point.x = (traj_start_corner_x + local_point[0]) / 1000.0
 			global_point.y = (traj_start_corner_y - local_point[1]) / 1000.0
-
 			traj_to_pub.trajectory.append(global_point)
+		ready_to_pub= True
 
-		ready_to_pub= True		
+		
+		# for pt in traj_to_pub
+
+
+
+
 
 
 def generate_trajectory():
 	global ready_to_pub
 
-	rate = rospy.Rate(10) # 10Hz
+	rate = rospy.Rate(60) # 10Hz
 
 	while not rospy.is_shutdown():
 		if ready_to_pub:

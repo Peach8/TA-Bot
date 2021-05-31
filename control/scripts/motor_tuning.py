@@ -33,8 +33,12 @@ desired_motor_pwm.value2 = 0
 desired_motor_pwm.value3 = 0
 # desired_motor_pwm.id = joint_id_dict[joint_str]
 
+# Specify initial motor position
+initial_motor_position = 2000
 # change the gains and re-run node
 # - joint1 position control gains
+# kp_pos1 = 2.0
+# kd_pos1 = 0.0
 kp_pos1 = 10.0
 kd_pos1 = 0.15
 ki_pos1 = 0.0
@@ -42,7 +46,7 @@ ff_pwm1 = 0.0 # TODO: @Oph
 joint1_pos_pid_gains = [kp_pos1, kd_pos1, ki_pos1]
 
 # - joint2 position control gains
-kp_pos2 = 4.0
+kp_pos2 = 10.0
 kd_pos2 = 0.1
 ki_pos2 = 0.0
 ff_pwm2 = 0.0 # TODO: @Oph
@@ -84,7 +88,7 @@ global ff_pwm
 ff_pwm = 0 # int
 
 min_motor_position = 990
-max_motor_position = 3000
+max_motor_position = 3525
 
 max_motor_velocity = 1023 # signed 10-bit int with units 0.229 rpm/bit
 
@@ -205,26 +209,30 @@ if __name__ == '__main__':
 
 	# set up position pid service proxies
 	if motor_controller is ControlApproach.POSITION or motor_controller is ControlApproach.CASCADE:
-		rospy.wait_for_service(joint_str + "_pos_pid_set_gains")
-		pid_set_gains = rospy.ServiceProxy(joint_str + "_pos_pid_set_gains", PIDSetGains)
+		# rospy.wait_for_service(joint_str + "_pos_pid_set_gains")
+		rospy.wait_for_service("pid_set_gains1")
+		# pid_set_gains = rospy.ServiceProxy(joint_str + "_pos_pid_set_gains", PIDSetGains)
+		pid_set_gains = rospy.ServiceProxy("pid_set_gains1", PIDSetGains)
 		try:
 			set_gains_resp = pid_set_gains(*joint_pos_pid_gains[joint_id_dict[joint_str]])
 
 			# confirm response via sum
 			if set_gains_resp.sum == int(sum(joint_pos_pid_gains[joint_id_dict[joint_str]])):
-				print("pid gain checksum confirmed")
+				print(f"pid gain checksum confirmed: {set_gains_resp.sum}")
+
 			else:
 				print("Invalid response from PIDSetGains service")
 				sys.exit(1)
 		except rospy.ServiceException as set_gains_exception:
 			print(str(set_gains_exception))
 
-		rospy.wait_for_service(joint_str + "_pos_pid_compute")
-		pid_compute = rospy.ServiceProxy(joint_str + "_pos_pid_compute", PIDCompute)
+		# rospy.wait_for_service(joint_str + "_pos_pid_compute")
+		# pid_compute = rospy.ServiceProxy(joint_str + "_pos_pid_compute", PIDCompute)
+		rospy.wait_for_service("pid_compute1")
+		pid_compute = rospy.ServiceProxy("pid_compute1", PIDCompute)
 
 	# set up velocity pid service proxies
 	if motor_controller is ControlApproach.VELOCITY or motor_controller is ControlApproach.CASCADE:
-		rospy.wait_for_service(joint_str + "_vel_pid_set_gains")
 		pid_set_gains = rospy.ServiceProxy(joint_str + "_vel_pid_set_gains", PIDSetGains)
 		try:
 			set_gains_resp = pid_set_gains(*joint_vel_pid_gains[joint_id_dict[joint_str]])
@@ -247,7 +255,7 @@ if __name__ == '__main__':
 
 		time.sleep(1)
 		target_start_position.id = joint_id_dict[joint_str]
-		target_start_position.position = 2000
+		target_start_position.position = initial_motor_position
 		set_motor_position_pub.publish(target_start_position)
 		time.sleep(1)
 		pen_down()
