@@ -23,6 +23,8 @@ joint_id_dict = {"joint1": 0, "joint2": 1, "joint3": 2}
 
 global actual_motor_position
 global actual_motor_velocity
+global pen_pos_up
+
 
 desired_motor_pwm = BulkSetPWM()
 desired_motor_pwm.id1 = 0
@@ -39,27 +41,34 @@ initial_motor_position = 2000
 # - joint1 position control gains
 # kp_pos1 = 2.0
 # kd_pos1 = 0.0
-kp_pos1 = 10.0
-kd_pos1 = 0.15
-ki_pos1 = 0.0
+# - joint1 position control gains
+kp1_u = 4.0
+kd1_u = 0.2
+ki1_u = 2.0
+kp1_d = 15.0
+kd1_d = 0.4
+ki1_d = 0.0
 ff_pwm1 = 0.0 # TODO: @Oph
-joint1_pos_pid_gains = [kp_pos1, kd_pos1, ki_pos1]
+joint1_pos_pid_gains = [kp1_u, kd1_u, ki1_u, kp1_d, kd1_d, ki1_d]
+
 
 # - joint2 position control gains
-kp_pos2 = 10.0
-kd_pos2 = 0.1
-ki_pos2 = 0.0
+kp2_u = 4.0
+kd2_u = 0.2
+ki2_u = 2.0
+kp2_d = 12.0
+kd2_d = 0.15
+ki2_d = 0.0
 ff_pwm2 = 0.0 # TODO: @Oph
-joint2_pos_pid_gains = [kp_pos2, kd_pos2, ki_pos2]
+joint2_pos_pid_gains = [kp2_u, kd2_u, ki2_u, kp2_d, kd2_d, ki2_d]
 
-# - joint3 position control gains
-kp_pos3 = 1.0
-kd_pos3 = 0.0
-ki_pos3 = 0.0
-ff_pwm3 = 0.0
-joint3_pos_pid_gains = [kp_pos3, kd_pos3, ki_pos3]
+# kp_pos3 = 1.0
+# kd_pos3 = 0.0
+# ki_pos3 = 0.0
+# ff_pwm3 = 0.0
+# joint3_pos_pid_gains = [kp_pos3, kd_pos3, ki_pos3]
 
-joint_pos_pid_gains = [joint1_pos_pid_gains, joint2_pos_pid_gains, joint3_pos_pid_gains]
+joint_pos_pid_gains = [joint1_pos_pid_gains, joint2_pos_pid_gains]
 
 # - joint1 velocity control gains
 kp_vel1 = 2.0
@@ -101,23 +110,35 @@ global bag_data
 bag_data = Int32()
 
 def pen_down():
+	global pen_pos_up
+
+	print('\nPEN DOWN...\n')
+	pen_pos_up = False
+	
 	stop_motors()
-	time.sleep(2)
+	time.sleep(.1)
+
 	pen_down_msg = SetMotorPosition()
 	pen_down_msg.id = 2
-	pen_down_msg.position = 875
+	pen_down_msg.position = 750
 	set_motor_position_pub.publish(pen_down_msg)
 	time.sleep(2)
 
+
 def pen_up():
+	global pen_pos_up
+
+	print('\nPEN UP...\n')
+	pen_pos_up = True
+	
 	stop_motors()
-	time.sleep(2)
+	time.sleep(.1)
+	
 	pen_up_msg = SetMotorPosition()
 	pen_up_msg.id = 2
 	pen_up_msg.position = 450
 	set_motor_position_pub.publish(pen_up_msg)
 	time.sleep(2)
-
 
 def stop_motors():
 	# write zero pwm
@@ -131,6 +152,7 @@ def control_motor_position(desired_motor_position):
 	global ff_pwm
 	global bag_data
 	global actual_motor_position
+	global pen_pos_up
 
 	get_motor_position_resp = get_motor_position()
 	if joint_id_dict[joint_str] == 0:
@@ -147,7 +169,7 @@ def control_motor_position(desired_motor_position):
 
 	position_error = desired_motor_position - actual_motor_position
 
-	pid_compute_resp = pid_compute(position_error)
+	pid_compute_resp = pid_compute(position_error, pen_pos_up)
 	return pid_compute_resp.output
 
 
