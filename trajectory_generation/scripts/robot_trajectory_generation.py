@@ -13,7 +13,7 @@ from trajectory_generation.msg import *
 num_traj_files = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
 
 global traj_pub
-traj_to_pub = Trajectory2D()
+traj_to_pub = Trajectory2D()  
 global ready_to_pub
 ready_to_pub = False
 
@@ -64,10 +64,22 @@ def callback(data):
 				global_point = Point()
 				global_point.x = (traj_start_corner_x + local_point[0]) / 1000.0
 				global_point.y = (traj_start_corner_y - local_point[1]) / 1000.0
-				if i == 0:
-					traj_to_pub.trajectory1.append(global_point)
-				elif i == 1:
-					traj_to_pub.trajectory2.append(global_point)
+				
+ 
+				#if the distance between current global point and previous global point is greater than the sparsify threshold...
+				for i in range(1,len(num_trajs)) # we have to start with the second point (aka not zero)
+
+					if math.sqrt(math.pow(global_point.x[i]-global_point.x[i-1],2)+math.pow(global_point.y[i]-global_point.y[i-1],2)) > sparsify_threshold
+					#option b: if local point can be considered as i 
+					# if math.sqrt(mat.pow(global_point.x(local_point)-global_point.y(local_point-1))+math.pow(global_point(local_point)-global_point(local_point-1)) < sparsify_threshold
+
+						#...then append the point
+						if i == 0:
+							traj_to_pub.trajectory1.append(global_point)
+						elif i == 1:
+							traj_to_pub.trajectory2.append(global_point)
+					else
+						continue #my thought is that this will continue on to continue the for loop for the next point
 
 		ready_to_pub= True
 
