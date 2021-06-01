@@ -15,7 +15,8 @@ from numpy.linalg import norm
 
 global ready_to_go
 ready_to_go = False
-global desired_traj_xy
+global desired_trajs
+desired_trajs =[]
 
 # define global variables
 global actual_motor_encs
@@ -216,9 +217,10 @@ def stop_motors():
 
 def trajectory_received_callback(data):
 	global ready_to_go
-	global desired_traj_xy
+	global desired_trajs
 	ready_to_go = True
-	desired_traj_xy = data.trajectory
+	desired_trajs[0] = data.trajectory1
+	desired_trajs[1] = data.trajectory2
 	# desired_traj_x = 0.209
 	# desired_traj_y_start = 0.079
 	# traj_step = 0.01
@@ -289,71 +291,73 @@ if __name__ == '__main__':
 			ax.plot(xs, ys, marker='o')
 			plt.show()
 
-			for i in range(len(desired_traj_xy)):
-				desired_x = desired_traj_xy[i].x
-				desired_y = desired_traj_xy[i].y
+			for i in range(len(desired_trajs)):
+				desired_traj_xy = desired_trajs[i]
+				for j in range(len(desired_traj_xy)):
+					desired_x = desired_traj_xy[j].x
+					desired_y = desired_traj_xy[j].y
 
-				print("desired x: " + str(desired_x))
-				print("desired y: " + str(desired_y))
+					print("desired x: " + str(desired_x))
+					print("desired y: " + str(desired_y))
 
-				# compute corresponding desired joint positions in radians
-				ik_compute_resp = ik_compute(desired_x, desired_y)
-				if not ik_compute_resp.success:
-					stop_motors()
-					sys.exit(0)
+					# compute corresponding desired joint positions in radians
+					ik_compute_resp = ik_compute(desired_x, desired_y)
+					if not ik_compute_resp.success:
+						stop_motors()
+						sys.exit(0)
 
-				desired_joint_thetas = [ik_compute_resp.theta1, ik_compute_resp.theta2]
+					desired_joint_thetas = [ik_compute_resp.theta1, ik_compute_resp.theta2]
 
-				print("desired theta1: " + str(desired_joint_thetas[0]))
-				print("desired theta2: " + str(desired_joint_thetas[1]))
+					print("desired theta1: " + str(desired_joint_thetas[0]))
+					print("desired theta2: " + str(desired_joint_thetas[1]))
 
-				desired_motor_encs = []
-				for j in range(2):
-					# clamp desired joint position (note this is in joint space, not motor space)
-					# - just an additional safety feature (ik should confirm (x,y) is reachable)
-					desired_joint_thetas[j] = clamp_joint_position(j, desired_joint_thetas[j])
+					desired_motor_encs = []
+					for k in range(2):
+						# clamp desired joint position (note this is in joint space, not motor space)
+						# - just an additional safety feature (ik should confirm (x,y) is reachable)
+						desired_joint_thetas[k] = clamp_joint_position(k, desired_joint_thetas[k])
 
-					# convert desired from joint space to motor space
-					desired_motor_theta = (desired_joint_thetas[j] + joint_offsets[j])
+						# convert desired from joint space to motor space
+						desired_motor_theta = (desired_joint_thetas[k] + joint_offsets[k])
 
-					# map motor position in radians to encoder space before starting pid control
-					desired_motor_encs.append(desired_motor_theta / (2*math.pi) * 4095)
+						# map motor position in radians to encoder space before starting pid control
+						desired_motor_encs.append(desired_motor_theta / (2*math.pi) * 4095)
 
-				print("desired enc1: " + str(desired_motor_encs[0]))
-				print("desired enc2: " + str(desired_motor_encs[1]))
+					print("desired enc1: " + str(desired_motor_encs[0]))
+					print("desired enc2: " + str(desired_motor_encs[1]))
 
-				counter = 0
-				while True:
-					control_motor_positions(desired_motor_encs)
+					counter = 0
+					while True:
+						control_motor_positions(desired_motor_encs)
 
-					motor_pwm_pub.publish(desired_motor_pwm)
+						motor_pwm_pub.publish(desired_motor_pwm)
 
-					compute_actual_xy()
-					x_err = abs(desired_traj_xy[i].x - actual_xy[0])
-					y_err = abs(desired_traj_xy[i].y - actual_xy[1])
-					# print("x error: " + str(x_err))
-					# print("y error: " + str(y_err))
-					print(f"error: {norm([x_err,y_err])}")
-					print("actual_motor_encs1: " + str(actual_motor_encs[0]) + " / actual_motor_encs2: " + str(actual_motor_encs[1]))
-					print("desired_motor_pwm1: " + str(desired_motor_pwm.value1)+ " / desired_motor_pwn2: " + str(desired_motor_pwm.value2))
-					if pen_pos_up and counter >= 10:
-						if norm([x_err,y_err]) <= pen_up_xy_epsilon: break
-					elif pen_pos_up and counter < 10:
-						if norm([x_err,y_err]) <= pen_up_xy_epsilon: counter = counter + 1
-						else: counter = 0
-					elif not pen_pos_up:
-						if norm([x_err,y_err]) <= pen_down_xy_epsilon: break
-					else:
-						print('this should never print')
+						compute_actual_xy()
+						x_err = abs(desired_x - actual_xy[0])
+						y_err = abs(desired_y - actual_xy[1])
+						# print("x error: " + str(x_err))
+						# print("y error: " + str(y_err))
+						print(f"error: {norm([x_err,y_err])}")
+						print("actual_motor_encs1: " + str(actual_motor_encs[0]) + " / actual_motor_encs2: " + str(actual_motor_encs[1]))
+						print("desired_motor_pwm1: " + str(desired_motor_pwm.value1)+ " / desired_motor_pwn2: " + str(desired_motor_pwm.value2))
+						if pen_pos_up and counter >= 10:
+							if norm([x_err,y_err]) <= pen_up_xy_epsilon: break
+						elif pen_pos_up and counter < 10:
+							if norm([x_err,y_err]) <= pen_up_xy_epsilon: counter = counter + 1
+							else: counter = 0
+						elif not pen_pos_up:
+							if norm([x_err,y_err]) <= pen_down_xy_epsilon: break
+						else:
+							print('this should never print')
 
-				rate.sleep()
+					rate.sleep()
 
-				#pen placed down after reaching the first point
-				if i == 1:
-					# stop_motors()
-					# time.sleep(1)
-					print("pen going down...")
-					pen_down()
+					#pen placed down after reaching the first point
+					if j == 1:
+						# stop_motors()
+						# time.sleep(1)
+						print("pen going down...")
+						pen_down()
 
 			print("TRAJECTORY COMPLETE")
 			# pen_up()

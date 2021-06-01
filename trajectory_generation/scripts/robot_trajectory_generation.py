@@ -33,8 +33,12 @@ def callback(data):
 
 	if data.x != 0.0: # only take action after SPACEBAR click
 		# prompt user for desired number
-		num_to_write = int(input("Enter single-digit number\n"))
-		num_traj = np.loadtxt("/home/alex/catkin_ws/src/TA-Bot/trajectory_generation/scripts/" + num_traj_files[num_to_write] + ".txt")
+		num_to_write = int(input("Enter double-digit number\n"))
+		first_digit = int(num_to_write/10)
+		second_digit = num_to_write%10
+		
+		first_num_traj = np.loadtxt("/home/alex/catkin_ws/src/TA-Bot/trajectory_generation/scripts/" + num_traj_files[first_digit] + ".txt")
+		second_num_traj = np.loadtxt("/home/alex/catkin_ws/src/TA-Bot/trajectory_generation/scripts/" + num_traj_files[second_digit] + ".txt")
 
 		# - convert paper corner coords from pixels to mm
 		paper_fiducial_global_x = workspace_conversions.convert_pixels_to_mm(data.x)
@@ -43,30 +47,29 @@ def callback(data):
 		print("paper fiducial global x: " + str(paper_fiducial_global_x))
 		print("paper fiducial global y: " + str(paper_fiducial_global_y))
 
-		# everything from now on is in global frame
-		# - offset paper corner to start pos for first number
-		traj_start_corner_x = paper_fiducial_global_x - traj_width_global
-		traj_start_corner_y = paper_fiducial_global_y
+		num_trajs = [first_num_traj, second_num_traj]
+		for i in range(2):
+			# everything from now on is in global frame
+			# - offset paper corner to start pos for first number
+			traj_start_corner_x = paper_fiducial_global_x - (2-i)*traj_width_global
+			traj_start_corner_y = paper_fiducial_global_y
 
-		print("traj_start_corner_x" + str(traj_start_corner_x))
-		print("traj_start_corner_y" + str(traj_start_corner_y))
+			print("digit " + str(i) + " traj_start_corner_x" + str(traj_start_corner_x))
+			print("digit " + str(i) + " traj_start_corner_y" + str(traj_start_corner_y))
 
-		# - add desired number trajectory global coords starting at previous offset
-		# -- loop through each trajectory point and offset based on pixel frame orientation and
-		#    append to trajectory msg
-		for local_point in num_traj:
-			global_point = Point()
-			global_point.x = (traj_start_corner_x + local_point[0]) / 1000.0
-			global_point.y = (traj_start_corner_y - local_point[1]) / 1000.0
-			traj_to_pub.trajectory.append(global_point)
+			# - add desired number trajectory global coords starting at previous offset
+			# -- loop through each trajectory point and offset based on pixel frame orientation and
+			#    append to trajectory msg
+			for local_point in num_trajs[i]:
+				global_point = Point()
+				global_point.x = (traj_start_corner_x + local_point[0]) / 1000.0
+				global_point.y = (traj_start_corner_y - local_point[1]) / 1000.0
+				if i == 0:
+					traj_to_pub.trajectory1.append(global_point)
+				elif i == 1:
+					traj_to_pub.trajectory2.append(global_point)
+
 		ready_to_pub= True
-
-		
-		# for pt in traj_to_pub
-
-
-
-
 
 
 def generate_trajectory():
