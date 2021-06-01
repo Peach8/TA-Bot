@@ -1,5 +1,8 @@
-float32 kp
-float32 kd
-float32 ki
+float32 kp_up
+float32 kd_up
+float32 ki_up
+float32 kp_down
+float32 kd_down
+float32 ki_down
 ---
 int32 sum

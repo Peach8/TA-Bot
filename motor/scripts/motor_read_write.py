@@ -28,7 +28,7 @@ else:
         return ch
 
 # Motor Clamping Value
-MOTOR_CLAMP             = 150              # CLAMP PWM FULL SCALE [-885, 885]
+MOTOR_CLAMP             = 250              # CLAMP PWM FULL SCALE [-885, 885]
 
 # Control table address
 ADDR_BAUD_RATE          = 8                # $

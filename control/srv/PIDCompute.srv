@@ -1,3 +1,4 @@
 float32 error
+bool pen_pos_up
 ---
 int32 output

@@ -11,6 +11,7 @@ from motor.srv import *
 from motor.msg import *
 from trajectory_generation.msg import *
 import matplotlib.pyplot as plt
+from numpy.linalg import norm
 
 global ready_to_go
 ready_to_go = False
@@ -21,7 +22,10 @@ global actual_motor_encs
 actual_motor_encs = [0,0]
 global actual_xy
 actual_xy = [0.0,0.0]
-xy_epsilon = 0.0025
+global pen_up_xy_epsilon
+global pen_down_xy_epsilon
+pen_up_xy_epsilon = 0.002
+pen_down_xy_epsilon = 0.006
 
 global motor_pwm_pub
 global desired_motor_pwm
@@ -29,6 +33,8 @@ desired_motor_pwm = BulkSetPWM()
 desired_motor_pwm.id1 = 0
 desired_motor_pwm.id2 = 1
 desired_motor_pwm.id3 = 2
+
+global pen_pos_up
 
 joint_names = ["joint1", "joint2", "joint3"]
 
@@ -46,28 +52,35 @@ joint2_max = 2.28 - (2.08 / 180 * math.pi) # rad
 joint_limits = [[joint1_min,joint1_max], [joint2_min,joint2_max]]
 
 # - joint1 position control gains
-kp1 = 12.0
-kd1 = 0.12
-ki1 = 0.0
+kp1_u = 4.0
+kd1_u = 0.2
+ki1_u = 2.0
+kp1_d = 12.0
+kd1_d = 0.15
+ki1_d = 0.0
 ff_pwm1 = 0.0 # TODO: @Oph
-joint1_pid_gains = [kp1, kd1, ki1]
+joint1_pid_gains = [kp1_u, kd1_u, ki1_u, kp1_d, kd1_d, ki1_d]
 
 # - joint2 position control gains
-kp2 = 12.0
-kd2 = 0.12
-ki2 = 0.0
+kp2_u = 4.0
+kd2_u = 0.2
+ki2_u = 2.0
+kp2_d = 12.0
+kd2_d = 0.15
+ki2_d = 0.0
 ff_pwm2 = 0.0 # TODO: @Oph
-joint2_pid_gains = [kp2, kd2, ki2]
+joint2_pid_gains = [kp2_u, kd2_u, ki2_u, kp2_d, kd2_d, ki2_d]
 
-# - joint3 position control gains
-kp3 = 1.0
-kd3 = 0.0
-ki3 = 0.0
-ff_pwm3 = 0.0
-joint3_pid_gains = [kp3, kd3, ki3]
 
-joint_pid_gains = [joint1_pid_gains, joint2_pid_gains, joint3_pid_gains]
-joint_ffs = [ff_pwm1, ff_pwm2, ff_pwm3]
+# # - joint3 position control gains
+# kp3 = 1.0
+# kd3 = 0.0
+# ki3 = 0.0
+# ff_pwm3 = 0.0
+# joint3_pid_gains = [kp3, kd3, ki3]
+
+joint_pid_gains = [joint1_pid_gains, joint2_pid_gains]
+joint_ffs = [ff_pwm1, ff_pwm2]
 
 # bags
 actual_xy_bag = rosbag.Bag("actual_xy.bag", 'w')
@@ -89,6 +102,7 @@ def control_motor_positions(desired_motor_encs):
 	# global desired_motor_pwm1
 	# global desired_motor_pwm2
 	global actual_motor_encs
+	global pen_pos_up
 
 	bulk_pos_response = get_motor_position()
 	# in encoder space [0-4095]
@@ -98,12 +112,12 @@ def control_motor_positions(desired_motor_encs):
 
 	for i in range(2):
 		if actual_motor_encs[i] != 0:
-			position_error = desired_motor_encs[i] - actual_motor_encs[i]
+			pid_compute_error = desired_motor_encs[i] - actual_motor_encs[i]
 			if i == 0:
-					pid_compute_resp = pid_compute1(position_error)
+					pid_compute_resp = pid_compute1(pid_compute_error, pen_pos_up)
 					desired_motor_pwm.value1 = int(pid_compute_resp.output + joint_ffs[i])
 			elif i == 1:
-					pid_compute_resp = pid_compute2(position_error)
+					pid_compute_resp = pid_compute2(pid_compute_error, pen_pos_up)
 					desired_motor_pwm.value2 = int(pid_compute_resp.output + joint_ffs[i])
 
 
@@ -127,36 +141,70 @@ def compute_actual_xy():
 
 
 def pen_down():
+	global pen_pos_up
+
 	print('\nPEN DOWN...\n')
+	pen_pos_up = False
+	
 	stop_motors()
-	time.sleep(1)
+	time.sleep(.1)
+
 	pen_down_msg = SetMotorPosition()
 	pen_down_msg.id = 2
-	pen_down_msg.position = 775
+	pen_down_msg.position = 750
 	set_motor_position_pub.publish(pen_down_msg)
 	time.sleep(2)
 
+
 def pen_up():
+	global pen_pos_up
+
 	print('\nPEN UP...\n')
+	pen_pos_up = True
+	
 	stop_motors()
-	time.sleep(1)
+	time.sleep(.1)
+	
 	pen_up_msg = SetMotorPosition()
 	pen_up_msg.id = 2
 	pen_up_msg.position = 450
 	set_motor_position_pub.publish(pen_up_msg)
 	time.sleep(2)
 
+
 def process_kill_handler(sig, frame):
 	print("closing bags...")
 	actual_xy_bag.close() # close rosbag on CTRL+C
-
+	return_home()
 	stop_motors()
-
 	sys.exit(0)
 
 
+def return_home():
+	global home_pos
+	global desired_motor_pwm
+
+	pen_up()
+
+	print('\nRETURNING HOME...\n')
+
+	desired_motor_encs = [1350, 3400]
+
+	print("desired enc1: " + str(desired_motor_encs[0]))
+	print("desired enc2: " + str(desired_motor_encs[1]))
+
+	while True:
+		control_motor_positions(desired_motor_encs)
+		motor_pwm_pub.publish(desired_motor_pwm)
+
+		print("actual_motor_encs1: " + str(actual_motor_encs[0]) + " / actual_motor_encs2: " + str(actual_motor_encs[1]))
+		print("desired_motor_pwm1: " + str(desired_motor_pwm.value1)+ " / desired_motor_pwn2: " + str(desired_motor_pwm.value2))
+
+		if norm([des-act for des,act in zip(desired_motor_encs,actual_motor_encs)]) <= 10: break
+
+
+
 def stop_motors():
-	global motor_pwm_pub
 	# write zero pwm
 	# print("stopping motors...")
 	desired_motor_pwm.value1 = 0
@@ -195,7 +243,6 @@ if __name__ == '__main__':
 		rospy.wait_for_service("pid_set_gains" + str(i))
 		pid_set_gains = rospy.ServiceProxy("pid_set_gains" + str(i), PIDSetGains)
 		try:
-
 			set_gains_resp = pid_set_gains(*joint_pid_gains[i-1])
 			# confirm response via sum
 			if set_gains_resp.sum == int(sum(joint_pid_gains[i-1])):
@@ -209,8 +256,6 @@ if __name__ == '__main__':
 		rospy.wait_for_service("pid_compute" + str(i))
 		if i == 1: pid_compute1 = rospy.ServiceProxy("pid_compute" + str(i), PIDCompute)
 		elif i ==2: pid_compute2 = rospy.ServiceProxy("pid_compute" + str(i), PIDCompute)
-	
-
 
 	# - get actual motor position via encoder
 	rospy.wait_for_service("bulk_get_position")
@@ -227,11 +272,13 @@ if __name__ == '__main__':
 	
 	rate = rospy.Rate(60) # Hz
 
+	pen_up()
+
 	while not rospy.is_shutdown():
 		# loop through desired trajectory instead of prompting user
 		if ready_to_go:
-			pen_up()
 
+			#plot path
 			xs = []
 			ys = []
 			for i in range(len(desired_traj_xy)):
@@ -275,7 +322,7 @@ if __name__ == '__main__':
 				print("desired enc1: " + str(desired_motor_encs[0]))
 				print("desired enc2: " + str(desired_motor_encs[1]))
 
-				
+				counter = 0
 				while True:
 					control_motor_positions(desired_motor_encs)
 
@@ -284,26 +331,33 @@ if __name__ == '__main__':
 					compute_actual_xy()
 					x_err = abs(desired_traj_xy[i].x - actual_xy[0])
 					y_err = abs(desired_traj_xy[i].y - actual_xy[1])
-					print("x error: " + str(x_err))
-					print("y error: " + str(y_err))
-					print("actual_motor_encs1: " + str(actual_motor_encs[0]))
-					print("actual_motor_encs2: " + str(actual_motor_encs[1]))
-					print("desired_motor_pwm1: " + str(desired_motor_pwm.value1))
-					print("desired_motor_pwn2: " + str(desired_motor_pwm.value2))
-					if x_err <= xy_epsilon and y_err <= xy_epsilon:
-					   break
+					# print("x error: " + str(x_err))
+					# print("y error: " + str(y_err))
+					print(f"error: {norm([x_err,y_err])}")
+					print("actual_motor_encs1: " + str(actual_motor_encs[0]) + " / actual_motor_encs2: " + str(actual_motor_encs[1]))
+					print("desired_motor_pwm1: " + str(desired_motor_pwm.value1)+ " / desired_motor_pwn2: " + str(desired_motor_pwm.value2))
+					if pen_pos_up and counter >= 10:
+						if norm([x_err,y_err]) <= pen_up_xy_epsilon: break
+					elif pen_pos_up and counter < 10:
+						if norm([x_err,y_err]) <= pen_up_xy_epsilon: counter = counter + 1
+						else: counter = 0
+					elif not pen_pos_up:
+						if norm([x_err,y_err]) <= pen_down_xy_epsilon: break
+					else:
+						print('this should never print')
 
 				rate.sleep()
 
 				#pen placed down after reaching the first point
-				if i == 10:
+				if i == 1:
 					# stop_motors()
 					# time.sleep(1)
 					print("pen going down...")
 					pen_down()
 
 			print("TRAJECTORY COMPLETE")
-			pen_up()
+			# pen_up()
+			return_home()
 			stop_motors()
 			sys.exit(0)
 
