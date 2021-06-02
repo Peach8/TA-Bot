@@ -25,7 +25,7 @@ global actual_xy
 actual_xy = [0.0,0.0]
 global pen_up_xy_epsilon
 global pen_down_xy_epsilon
-pen_up_xy_epsilon = 0.002
+pen_up_xy_epsilon = 0.0005
 pen_down_xy_epsilon = 0.006
 
 global motor_pwm_pub
@@ -56,8 +56,8 @@ joint_limits = [[joint1_min,joint1_max], [joint2_min,joint2_max]]
 kp1_u = 4.0
 kd1_u = 0.2
 ki1_u = 2.0
-kp1_d = 12.0
-kd1_d = 0.2
+kp1_d = 5.0
+kd1_d = 0.1
 ki1_d = 0.0
 ff_pwm1 = 0.0 # TODO: @Oph
 joint1_pid_gains = [kp1_u, kd1_u, ki1_u, kp1_d, kd1_d, ki1_d]
@@ -66,8 +66,8 @@ joint1_pid_gains = [kp1_u, kd1_u, ki1_u, kp1_d, kd1_d, ki1_d]
 kp2_u = 4.0
 kd2_u = 0.2
 ki2_u = 2.0
-kp2_d = 12.0
-kd2_d = 0.2
+kp2_d = 5.0
+kd2_d = 0.1
 ki2_d = 0.0
 ff_pwm2 = 0.0 # TODO: @Oph
 joint2_pid_gains = [kp2_u, kd2_u, ki2_u, kp2_d, kd2_d, ki2_d]
@@ -219,8 +219,8 @@ def trajectory_received_callback(data):
 	global ready_to_go
 	global desired_trajs
 	ready_to_go = True
-	desired_trajs[0] = data.trajectory1
-	desired_trajs[1] = data.trajectory2
+	desired_trajs.append(data.trajectory1)
+	desired_trajs.append(data.trajectory2)
 	# desired_traj_x = 0.209
 	# desired_traj_y_start = 0.079
 	# traj_step = 0.01
@@ -280,19 +280,20 @@ if __name__ == '__main__':
 		# loop through desired trajectory instead of prompting user
 		if ready_to_go:
 
-			#plot path
-			xs = []
-			ys = []
-			for i in range(len(desired_traj_xy)):
-				xs.append(desired_traj_xy[i].x)
-				ys.append(desired_traj_xy[i].y)
-
-			fig, ax = plt.subplots()
-			ax.plot(xs, ys, marker='o')
-			plt.show()
-
 			for i in range(len(desired_trajs)):
+
 				desired_traj_xy = desired_trajs[i]
+				#plot path
+				xs = []
+				ys = []
+				for j in range(len(desired_traj_xy)):
+					xs.append(desired_traj_xy[j].x)
+					ys.append(desired_traj_xy[j].y)
+
+				fig, ax = plt.subplots()
+				ax.plot(xs, ys, marker='o')
+				plt.show()
+
 				for j in range(len(desired_traj_xy)):
 					desired_x = desired_traj_xy[j].x
 					desired_y = desired_traj_xy[j].y
@@ -340,9 +341,9 @@ if __name__ == '__main__':
 						print(f"error: {norm([x_err,y_err])}")
 						print("actual_motor_encs1: " + str(actual_motor_encs[0]) + " / actual_motor_encs2: " + str(actual_motor_encs[1]))
 						print("desired_motor_pwm1: " + str(desired_motor_pwm.value1)+ " / desired_motor_pwn2: " + str(desired_motor_pwm.value2))
-						if pen_pos_up and counter >= 10:
+						if pen_pos_up and counter >= 3:
 							if norm([x_err,y_err]) <= pen_up_xy_epsilon: break
-						elif pen_pos_up and counter < 10:
+						elif pen_pos_up and counter < 3:
 							if norm([x_err,y_err]) <= pen_up_xy_epsilon: counter = counter + 1
 							else: counter = 0
 						elif not pen_pos_up:
@@ -358,9 +359,9 @@ if __name__ == '__main__':
 						# time.sleep(1)
 						print("pen going down...")
 						pen_down()
-
+				pen_up()
 			print("TRAJECTORY COMPLETE")
-			# pen_up()
+			#pen_up()
 			return_home()
 			stop_motors()
 			sys.exit(0)

@@ -17,16 +17,19 @@ traj_to_pub = Trajectory2D()
 global ready_to_pub
 ready_to_pub = False
 
+manual_correction_x = 0.0035
+manual_correction_y = 0.0035
+
 base_frame_offset_x_mm = 0
 base_frame_offset_y_mm = 146
 
 global sparsify_threshold
-sparsify_threshold = 0.0005
+sparsify_threshold = 0.002
 
-traj_width_pixel = 200
+traj_width_pixel = 100
 traj_height_pixel = 250
 traj_width_global = 50 #workspace_conversions.convert_pixels_to_mm(traj_width_pixel)
-# traj_height_global = workspace_conversions.convert_pixels_to_mm(traj_height_pixel)
+# traj_height_global  = workspace_conversions.convert_pixels_to_mm(traj_height_pixel)
 
 def callback(data):
 	global ready_to_pub
@@ -48,8 +51,11 @@ def callback(data):
 		print("paper fiducial global y: " + str(paper_fiducial_global_y))
 
 		num_trajs = [first_num_traj, second_num_traj]
+		full_traj_1 = []
+		full_traj_2 = []
+
 		for i in range(2):
-			# everything from now on is in global frame
+			# everything from now on is in global fram
 			# - offset paper corner to start pos for first number
 			traj_start_corner_x = paper_fiducial_global_x - (2-i)*traj_width_global
 			traj_start_corner_y = paper_fiducial_global_y
@@ -64,24 +70,35 @@ def callback(data):
 				global_point = Point()
 				global_point.x = (traj_start_corner_x + local_point[0]) / 1000.0
 				global_point.y = (traj_start_corner_y - local_point[1]) / 1000.0
+
+				global_point.x += manual_correction_x
+				global_point.y -= manual_correction_y
 				
- 
-				#if the distance between current global point and previous global point is greater than the sparsify threshold...
-				for i in range(1,len(num_trajs)) # we have to start with the second point (aka not zero)
+				if i == 0:
+					full_traj_1.append(global_point)
+				elif i == 1:
+					full_traj_2.append(global_point)
 
-					if math.sqrt(math.pow(global_point.x[i]-global_point.x[i-1],2)+math.pow(global_point.y[i]-global_point.y[i-1],2)) > sparsify_threshold
-					#option b: if local point can be considered as i 
-					# if math.sqrt(mat.pow(global_point.x(local_point)-global_point.y(local_point-1))+math.pow(global_point(local_point)-global_point(local_point-1)) < sparsify_threshold
+		sparse_1 = [full_traj_1[0]]
+		sparse_2 = [full_traj_2[0]]
+		#if the distance between current global point and previous global point is greater than the sparsify threshold...
+		for point in full_traj_1: # we have to start with the second point (aka not zero)
+			
+			if np.linalg.norm([point.x-sparse_1[-1].x, point.y-sparse_1[-1].y])>sparsify_threshold:
+				#...then append the point
+				sparse_1.append(point)
 
-						#...then append the point
-						if i == 0:
-							traj_to_pub.trajectory1.append(global_point)
-						elif i == 1:
-							traj_to_pub.trajectory2.append(global_point)
-					else
-						continue #my thought is that this will continue on to continue the for loop for the next point
+		for point in full_traj_2: # we have to start with the second point (aka not zero)
+		
+			if np.linalg.norm([point.x-sparse_2[-1].x, point.y-sparse_2[-1].y])>sparsify_threshold:
+				#...then append the point
+				sparse_2.append(point)
 
-		ready_to_pub= True
+		
+		traj_to_pub.trajectory1 = sparse_1
+		traj_to_pub.trajectory2 = sparse_2
+
+		ready_to_pub = True
 
 
 def generate_trajectory():
