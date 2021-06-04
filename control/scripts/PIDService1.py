@@ -23,6 +23,7 @@ class PIDService1:
 		self.update_hz = 60
 		self.output_min = -math.inf
 		self.output_max = math.inf
+		self.pen_position_up = True
 
 		rospy.Service('pid_set_gains1', PIDSetGains, self.handle_pid_set_gains)
 		rospy.Service('pid_compute1', PIDCompute, self.handle_pid_compute)
@@ -51,6 +52,11 @@ class PIDService1:
 		return self.output_min + self.output_max
 
 	def handle_pid_compute(self,req):
+		if self.pen_position_up != req.pen_pos_up:
+			self.i_term = 0
+
+		self.pen_position_up = req.pen_pos_up
+
 		if req.pen_pos_up:
 			self.p_term = self.kp_up*req.error
 			self.d_term = self.kd_up*(req.error - self.prev_error)*self.update_hz

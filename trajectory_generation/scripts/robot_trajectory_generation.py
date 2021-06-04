@@ -24,7 +24,7 @@ base_frame_offset_x_mm = 0
 base_frame_offset_y_mm = 146
 
 global sparsify_threshold
-sparsify_threshold = 0.002
+sparsify_threshold = 0.001
 
 traj_width_pixel = 100
 traj_height_pixel = 250

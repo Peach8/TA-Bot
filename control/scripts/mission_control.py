@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 import rosbag
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, Int32, Bool
 import sys
 import signal
 import math
@@ -12,6 +12,7 @@ from motor.msg import *
 from trajectory_generation.msg import *
 import matplotlib.pyplot as plt
 from numpy.linalg import norm
+from datetime import datetime
 
 global ready_to_go
 ready_to_go = False
@@ -25,8 +26,8 @@ global actual_xy
 actual_xy = [0.0,0.0]
 global pen_up_xy_epsilon
 global pen_down_xy_epsilon
-pen_up_xy_epsilon = 0.0005
-pen_down_xy_epsilon = 0.006
+pen_up_xy_epsilon = 0.002
+pen_down_xy_epsilon = 0.004
 
 global motor_pwm_pub
 global desired_motor_pwm
@@ -53,23 +54,23 @@ joint2_max = 2.28 - (2.08 / 180 * math.pi) # rad
 joint_limits = [[joint1_min,joint1_max], [joint2_min,joint2_max]]
 
 # - joint1 position control gains
-kp1_u = 4.0
-kd1_u = 0.2
-ki1_u = 2.0
-kp1_d = 5.0
+kp1_u = 1.25
+kd1_u = 0.05
+ki1_u = 1.5
+kp1_d = 4.0
 kd1_d = 0.1
-ki1_d = 0.0
-ff_pwm1 = 0.0 # TODO: @Oph
+ki1_d = 2.0
+ff_pwm1 = 0 # TODO: @Oph
 joint1_pid_gains = [kp1_u, kd1_u, ki1_u, kp1_d, kd1_d, ki1_d]
 
 # - joint2 position control gains
-kp2_u = 4.0
-kd2_u = 0.2
-ki2_u = 2.0
-kp2_d = 5.0
+kp2_u = 1.25
+kd2_u = 0.05
+ki2_u = 1.5
+kp2_d = 4.0
 kd2_d = 0.1
-ki2_d = 0.0
-ff_pwm2 = 0.0 # TODO: @Oph
+ki2_d = 2.0
+ff_pwm2 = 0 # TODO: @Oph
 joint2_pid_gains = [kp2_u, kd2_u, ki2_u, kp2_d, kd2_d, ki2_d]
 
 
@@ -84,7 +85,24 @@ joint_pid_gains = [joint1_pid_gains, joint2_pid_gains]
 joint_ffs = [ff_pwm1, ff_pwm2]
 
 # bags
-actual_xy_bag = rosbag.Bag("actual_xy.bag", 'w')
+date = str(datetime.now())
+data_bag = rosbag.Bag(f"run_data_{date}.bag", 'w')
+
+desired_x_bag = Float32()
+desired_y_bag = Float32()
+desired_theta1 = Float32()
+desired_theta2 = Float32()
+desired_enc1 = Float32()
+desired_enc2 = Float32()
+error_enc1 = Float32()
+error_enc2 = Float32()
+pen_down_pos = Bool()
+actual_x = Float32()
+actual_y = Float32()
+actual_enc1 =Int32()
+actual_enc2 = Int32()
+m1_pwm = Int32()
+m2_pwm = Int32()
 
 def clamp_joint_position(joint_idx, desired_joint_theta):
 	lower_limit = joint_limits[joint_idx][0]
@@ -116,10 +134,16 @@ def control_motor_positions(desired_motor_encs):
 			pid_compute_error = desired_motor_encs[i] - actual_motor_encs[i]
 			if i == 0:
 					pid_compute_resp = pid_compute1(pid_compute_error, pen_pos_up)
-					desired_motor_pwm.value1 = int(pid_compute_resp.output + joint_ffs[i])
+					if pen_pos_up:
+						desired_motor_pwm.value1 = int(pid_compute_resp.output)
+					else:
+						desired_motor_pwm.value1 = int(pid_compute_resp.output + (joint_ffs[i]>0)*joint_ffs[i] - (joint_ffs[i]<0)*joint_ffs[i])
 			elif i == 1:
 					pid_compute_resp = pid_compute2(pid_compute_error, pen_pos_up)
-					desired_motor_pwm.value2 = int(pid_compute_resp.output + joint_ffs[i])
+					if pen_pos_up:
+						desired_motor_pwm.value2 = int(pid_compute_resp.output)
+					else:
+						desired_motor_pwm.value2 = int(pid_compute_resp.output + (joint_ffs[i]>0)*joint_ffs[i] - (joint_ffs[i]<0)*joint_ffs[i])
 
 
 def compute_actual_xy():
@@ -152,7 +176,7 @@ def pen_down():
 
 	pen_down_msg = SetMotorPosition()
 	pen_down_msg.id = 2
-	pen_down_msg.position = 750
+	pen_down_msg.position = 605
 	set_motor_position_pub.publish(pen_down_msg)
 	time.sleep(2)
 
@@ -175,7 +199,7 @@ def pen_up():
 
 def process_kill_handler(sig, frame):
 	print("closing bags...")
-	actual_xy_bag.close() # close rosbag on CTRL+C
+	data_bag.close() # close rosbag on CTRL+C
 	return_home()
 	stop_motors()
 	sys.exit(0)
@@ -189,7 +213,7 @@ def return_home():
 
 	print('\nRETURNING HOME...\n')
 
-	desired_motor_encs = [1350, 3400]
+	desired_motor_encs = [1350, 3500]
 
 	print("desired enc1: " + str(desired_motor_encs[0]))
 	print("desired enc2: " + str(desired_motor_encs[1]))
@@ -201,7 +225,7 @@ def return_home():
 		print("actual_motor_encs1: " + str(actual_motor_encs[0]) + " / actual_motor_encs2: " + str(actual_motor_encs[1]))
 		print("desired_motor_pwm1: " + str(desired_motor_pwm.value1)+ " / desired_motor_pwn2: " + str(desired_motor_pwm.value2))
 
-		if norm([des-act for des,act in zip(desired_motor_encs,actual_motor_encs)]) <= 10: break
+		if norm([des-act for des,act in zip(desired_motor_encs,actual_motor_encs)]) <= 20: break
 
 
 
@@ -284,22 +308,31 @@ if __name__ == '__main__':
 
 				desired_traj_xy = desired_trajs[i]
 				#plot path
-				xs = []
-				ys = []
-				for j in range(len(desired_traj_xy)):
-					xs.append(desired_traj_xy[j].x)
-					ys.append(desired_traj_xy[j].y)
+				# xs = []
+				# ys = []
+				# for j in range(len(desired_traj_xy)):
+				# 	xs.append(desired_traj_xy[j].x)
+				# 	ys.append(desired_traj_xy[j].y)
 
-				fig, ax = plt.subplots()
-				ax.plot(xs, ys, marker='o')
-				plt.show()
+				# fig, ax = plt.subplots()
+				# ax.plot(xs, ys, marker='o')
+				# plt.show()
+
+
 
 				for j in range(len(desired_traj_xy)):
+
 					desired_x = desired_traj_xy[j].x
 					desired_y = desired_traj_xy[j].y
 
 					print("desired x: " + str(desired_x))
 					print("desired y: " + str(desired_y))
+					desired_x_bag.data = desired_x
+					desired_y_bag.data = desired_y
+
+					data_bag.write('desired_point', desired_traj_xy[j])
+					data_bag.write('desired_x', desired_x_bag)
+					data_bag.write('desired_y', desired_y_bag)
 
 					# compute corresponding desired joint positions in radians
 					ik_compute_resp = ik_compute(desired_x, desired_y)
@@ -311,6 +344,10 @@ if __name__ == '__main__':
 
 					print("desired theta1: " + str(desired_joint_thetas[0]))
 					print("desired theta2: " + str(desired_joint_thetas[1]))
+					desired_theta1.data = desired_joint_thetas[0]
+					desired_theta2.data = desired_joint_thetas[1]
+					data_bag.write('desired_theta1',desired_theta1)
+					data_bag.write('desired_theta2',desired_theta2)
 
 					desired_motor_encs = []
 					for k in range(2):
@@ -326,6 +363,10 @@ if __name__ == '__main__':
 
 					print("desired enc1: " + str(desired_motor_encs[0]))
 					print("desired enc2: " + str(desired_motor_encs[1]))
+					desired_enc1.data = desired_motor_encs[0]
+					desired_enc2.data = desired_motor_encs[1]
+					data_bag.write('desired_encoder1',desired_enc1)
+					data_bag.write('desired_encoder2',desired_enc2)
 
 					counter = 0
 					while True:
@@ -341,6 +382,27 @@ if __name__ == '__main__':
 						print(f"error: {norm([x_err,y_err])}")
 						print("actual_motor_encs1: " + str(actual_motor_encs[0]) + " / actual_motor_encs2: " + str(actual_motor_encs[1]))
 						print("desired_motor_pwm1: " + str(desired_motor_pwm.value1)+ " / desired_motor_pwn2: " + str(desired_motor_pwm.value2))
+
+						actual_x.data = actual_xy[0]
+						actual_y.data = actual_xy[1]
+						actual_enc1.data = actual_motor_encs[0]
+						actual_enc2.data = actual_motor_encs[1]
+						m1_pwm.data = desired_motor_pwm.value1
+						m2_pwm.data = desired_motor_pwm.value2
+						error_enc1.data = actual_motor_encs[0] - desired_motor_encs[0]
+						error_enc2.data = actual_motor_encs[1] - desired_motor_encs[1]
+						pen_down_pos.data = not pen_pos_up
+
+						data_bag.write('actual_x', actual_x)
+						data_bag.write('actual_y', actual_y)
+						data_bag.write('actual_encoder1', actual_enc1)
+						data_bag.write('actual_encoder2', actual_enc2)
+						data_bag.write('m1_pwm', m1_pwm)
+						data_bag.write('m2_pwm', m2_pwm)
+						data_bag.write('error_enc1', error_enc1)
+						data_bag.write('error_enc2', error_enc2)
+						data_bag.write('pen_down_pos', pen_down_pos)
+
 						if pen_pos_up and counter >= 3:
 							if norm([x_err,y_err]) <= pen_up_xy_epsilon: break
 						elif pen_pos_up and counter < 3:
@@ -354,14 +416,15 @@ if __name__ == '__main__':
 					rate.sleep()
 
 					#pen placed down after reaching the first point
-					if j == 1:
+					if j == 0:
 						# stop_motors()
 						# time.sleep(1)
-						print("pen going down...")
 						pen_down()
 				pen_up()
+			
 			print("TRAJECTORY COMPLETE")
 			#pen_up()
+			data_bag.close()
 			return_home()
 			stop_motors()
 			sys.exit(0)
