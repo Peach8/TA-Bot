@@ -3,7 +3,7 @@ import rospy
 import rosbag
 import sys
 import signal
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32, Float32
 from control.srv import *
 from motor.srv import *
 from motor.msg import *
@@ -42,23 +42,23 @@ initial_motor_position = 2000
 # kp_pos1 = 2.0
 # kd_pos1 = 0.0
 # - joint1 position control gains
-kp1_u = 4.0
-kd1_u = 0.2
-ki1_u = 2.0
-kp1_d = 15.0
-kd1_d = 0.4
+kp1_u = 1.25
+kd1_u = 0.05
+ki1_u = 1.5
+kp1_d = 6.0
+kd1_d = 0.1
 ki1_d = 0.0
 ff_pwm1 = 0.0 # TODO: @Oph
 joint1_pos_pid_gains = [kp1_u, kd1_u, ki1_u, kp1_d, kd1_d, ki1_d]
 
 
 # - joint2 position control gains
-kp2_u = 4.0
-kd2_u = 0.2
-ki2_u = 2.0
-kp2_d = 12.0
-kd2_d = 0.15
-ki2_d = 0.0
+kp2_u = 1.25
+kd2_u = 0.05
+ki2_u = 1.5
+kp2_d = 4.5
+kd2_d = 0.1
+ki2_d = 2.0
 ff_pwm2 = 0.0 # TODO: @Oph
 joint2_pos_pid_gains = [kp2_u, kd2_u, ki2_u, kp2_d, kd2_d, ki2_d]
 
@@ -107,7 +107,9 @@ if motor_controller is ControlApproach.POSITION or motor_controller is ControlAp
 elif motor_controller is ControlApproach.VELOCITY:
 	bag = rosbag.Bag('actual_velocity.bag', 'w')
 global bag_data
-bag_data = Int32()
+bag_pos = Int32()
+bag_error = Int32()
+bag_pwm = Int32()
 
 def pen_down():
 	global pen_pos_up
@@ -120,7 +122,7 @@ def pen_down():
 
 	pen_down_msg = SetMotorPosition()
 	pen_down_msg.id = 2
-	pen_down_msg.position = 750
+	pen_down_msg.position = 1275
 	set_motor_position_pub.publish(pen_down_msg)
 	time.sleep(2)
 
@@ -136,7 +138,7 @@ def pen_up():
 	
 	pen_up_msg = SetMotorPosition()
 	pen_up_msg.id = 2
-	pen_up_msg.position = 450
+	pen_up_msg.position = 1050
 	set_motor_position_pub.publish(pen_up_msg)
 	time.sleep(2)
 
@@ -164,12 +166,18 @@ def control_motor_position(desired_motor_position):
 
 	print(f'actual motor position: {actual_motor_position}')
 
-	bag_data.data = actual_motor_position
-	bag.write('actual_value', bag_data)	
-
 	position_error = desired_motor_position - actual_motor_position
 
 	pid_compute_resp = pid_compute(position_error, pen_pos_up)
+
+	bag_pos.data = actual_motor_position
+	bag_error.data = position_error
+	bag_pwm.data = pid_compute_resp.output
+
+	bag.write('actual_encoder1', bag_pos)	
+	bag.write('m1_pwm', bag_pwm)	
+	bag.write('error_enc1', bag_error)
+
 	return pid_compute_resp.output
 
 
@@ -282,7 +290,7 @@ if __name__ == '__main__':
 		time.sleep(1)
 		pen_down()
 
-	rate = rospy.Rate(60) # Hz
+	rate = rospy.Rate(100) # Hz
 	# rospy.spin()
 	# time.sleep(1)
 

@@ -57,7 +57,7 @@ joint_limits = [[joint1_min,joint1_max], [joint2_min,joint2_max]]
 kp1_u = 1.25
 kd1_u = 0.05
 ki1_u = 1.5
-kp1_d = 4.0
+kp1_d = 4.5
 kd1_d = 0.1
 ki1_d = 2.0
 ff_pwm1 = 0 # TODO: @Oph
@@ -67,7 +67,7 @@ joint1_pid_gains = [kp1_u, kd1_u, ki1_u, kp1_d, kd1_d, ki1_d]
 kp2_u = 1.25
 kd2_u = 0.05
 ki2_u = 1.5
-kp2_d = 4.0
+kp2_d = 4.5
 kd2_d = 0.1
 ki2_d = 2.0
 ff_pwm2 = 0 # TODO: @Oph
@@ -176,7 +176,7 @@ def pen_down():
 
 	pen_down_msg = SetMotorPosition()
 	pen_down_msg.id = 2
-	pen_down_msg.position = 605
+	pen_down_msg.position = 1265
 	set_motor_position_pub.publish(pen_down_msg)
 	time.sleep(2)
 
@@ -192,7 +192,7 @@ def pen_up():
 	
 	pen_up_msg = SetMotorPosition()
 	pen_up_msg.id = 2
-	pen_up_msg.position = 450
+	pen_up_msg.position = 1100
 	set_motor_position_pub.publish(pen_up_msg)
 	time.sleep(2)
 
